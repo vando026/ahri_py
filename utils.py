@@ -9,7 +9,7 @@ import numpy as np
 from datetime import datetime
 from functools import reduce
 import multiprocessing as mp
-from ahri.ahri.ptime import get_ptimex
+from ahri.ahri.ptime import agg_incx
 from time import sleep
 import sys
 
@@ -96,6 +96,7 @@ def pre_imp_set(rtdat, origin = datetime(1970, 1, 1)):
 
 def imp_random(rtdat):
     """Impute random dates in censored interval"""
+    np.random.seed()
     idates = np.random.randint(rtdat[:, 1] + 1,  rtdat[:, 2])
     ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
     ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
@@ -116,7 +117,7 @@ def set_inc_data(rtdat, imdat):
     return(ndat.to_numpy())
 
 
-def get_ptime(di):
+def agg_inc(di):
     """Get the person-time contributions"""
     syear = di[3]
     eyear = di[4]
@@ -134,40 +135,42 @@ def get_ptime(di):
                 ptimes[y] += 365
 
 
-def calc_inc(events, ptimes, pyears = 100):
-    """Calculate inc rate by person years"""
-    years = np.array(list(events.keys()), dtype = int)
-    events_ = np.array(list(events.values()))
-    ptimes_ = np.array(list(ptimes.values())) / 365
-    inc = ((events_ / ptimes_) * pyears).round(3)
-    return(np.c_[years, inc])
-
 def get_inc(rtdat, predat):
+    """Calculate inc rate by person years"""
     imdat = imp_random(predat) 
     sdat = set_inc_data(rtdat, imdat)
-    [get_ptime(sdat[i]) for i in range(sdat.shape[0])]
-    inc = calc_inc(events, ptimes)
+    for i in range(sdat.shape[0]):
+        agg_inc(sdat[i]) 
+    inc = [(events[x] / (ptimes[x] / 365)) * 100 
+            for x in events.keys()]
     return(inc)
 
-def time_inc(rtdat, predat, i = None, n = None):
+def time_inc(rtdat, predat, i, n):
     if (i is not None): 
         j = (i + 1) / n
         sys.stdout.write('\r')
         sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
         sys.stdout.flush()
         sleep(0.0005)
+    # you have to reset random seed for each process
+    np.random.seed()
     inc = get_inc(rtdat, predat)
     return(inc)
 
 
 def do_inc(rtdat, predat, args):
+    global ptimes 
     ptimes = {x:0 for x in range(np.min(args.years), np.max(args.years) + 1)}
+    global events 
     events = ptimes.copy()
     pool = mp.Pool(args.mcores) 
-    out = [pool.apply_async(time_inc, args = (rtdat, predat, i, args.nsim)) 
-            for i in range(args.nsim)]
-    inc = [r.get() for r in out]
+    out = [pool.apply_async(time_inc,
+        args = (rtdat, predat, i, args.nsim)) 
+        for i in range(args.nsim)]
+    # out = [time_inc(rtdat, predat, i, args.nsim) for i in range(args.nsim)]
+    inc = np.array([r.get() for r in out]).T
     pool.close()
-    inc = np.concatenate(inc, axis = 1)
-    inc = inc.agg(np.mean, axis = 1)
-    return(inc)
+    pool.join()
+    est = [np.mean(inc[i]) for i in range(inc.shape[0])]
+    est = pd.DataFrame({'Year': list(events.keys()), 'Rate': est})
+    return(est)
