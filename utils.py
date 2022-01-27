@@ -113,46 +113,39 @@ def set_inc_data(rtdat, imdat):
     ndat["startyear"] = dat["obs_start"].dt.year
     ndat["endyear"] = dat['obs_end'].dt.year
     ndat["event"] = dat["sero_event"]
-    return ndat
+    return(ndat.to_numpy())
 
 
 def get_ptime(di):
     """Get the person-time contributions"""
-    yi = np.arange(di[3], di[4] + 1, dtype = int)
-    ylen = len(yi)
-    if (ylen == 1):
-        ptime = di[2] - di[1]
+    syear = di[3]
+    eyear = di[4]
+    sday = di[1]
+    eday = di[2]
+    sero = di[5]
+    events[eyear] += sero
+    if (eyear - syear == 0):
+        ptimes[eyear] += eday - sday
     else:
-        ptime = np.array([365 - di[1], di[2]], dtype = int)
-        if (ylen > 2):
-            ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
-    return(np.c_[yi, ptime])
+        ptimes[syear] += 365 - sday
+        ptimes[eyear] += eday
+        if (eyear - syear > 2):
+            for y in range(syear + 1, eyear): 
+                ptimes[y] += 365
 
 
-def agg_ptime(dat):
-    ndat = dat.to_numpy()
-    # ptime = [get_ptime(ndat[i]) for i in range(ndat.shape[0])]
-    ptime = [get_ptimex(ndat[i]) for i in range(ndat.shape[0])]
-    ptime = pd.DataFrame(np.concatenate(ptime, axis=0), 
-            columns = ['Year', 'Days'])
-    agg_ptime = (ptime.groupby(ptime.Year). \
-            agg(Ptime = pd.NamedAgg('Days', sum)) / 365)
-    return(agg_ptime)
-
-def agg_event(dat):
-    events = dat.groupby(dat.endyear). \
-        agg(Events = pd.NamedAgg('event',  'sum'))
-    return(events)
-   
 def calc_inc(events, ptimes, pyears = 100):
-    inc = ( events.Events / ptimes.Ptime ) * pyears
-    return(inc)
+    """Calculate inc rate by person years"""
+    years = np.array(list(events.keys()), dtype = int)
+    events_ = np.array(list(events.values()))
+    ptimes_ = np.array(list(ptimes.values())) / 365
+    inc = ((events_ / ptimes_) * pyears).round(3)
+    return(np.c_[years, inc])
 
 def get_inc(rtdat, predat):
     imdat = imp_random(predat) 
     sdat = set_inc_data(rtdat, imdat)
-    ptimes = agg_ptime(sdat)
-    events = agg_event(sdat)
+    [get_ptime(sdat[i]) for i in range(sdat.shape[0])]
     inc = calc_inc(events, ptimes)
     return(inc)
 
@@ -168,6 +161,8 @@ def time_inc(rtdat, predat, i = None, n = None):
 
 
 def do_inc(rtdat, predat, args):
+    ptimes = {x:0 for x in range(np.min(args.years), np.max(args.years) + 1)}
+    events = ptimes.copy()
     pool = mp.Pool(args.mcores) 
     out = [pool.apply_async(time_inc, args = (rtdat, predat, i, args.nsim)) 
             for i in range(args.nsim)]
