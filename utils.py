@@ -85,28 +85,27 @@ def get_repeat_testers(dat, onlyRT = True):
   rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
   return(rt)
 
-def imp_random(rtdat, origin = datetime(1970, 1, 1)):
-    """Impute random dates in censored interval"""
-    ndat = rtdat.copy()
-    ndat = ndat[-pd.isna(ndat['early_pos'])]
+
+def pre_imp_set(rtdat, origin = datetime(1970, 1, 1)):
+    ndat = rtdat[-pd.isna(rtdat['early_pos'])]
     ndat = ndat[["IIntID", "late_neg", "early_pos"]]
     ndat['late_neg_'] = (ndat['late_neg'] - origin).dt.days
     ndat['early_pos_'] = (ndat['early_pos'] - origin).dt.days
-    def imp_rand(left, right): 
-        impdate = np.random.randint(left, right + 1)
-        return impdate
-    ndat['sero_date'] = ndat.apply(lambda row: 
-            imp_rand(row['late_neg_'], row['early_pos_']), axis=1)
-    ndat = ndat[["IIntID", "sero_date"]] 
-    ndat['sero_date'] = pd.to_datetime(ndat['sero_date'], unit='d')
-    tdat = pd.merge(rtdat, ndat, how='left', on='IIntID')
-    return(tdat[["IIntID", "obs_start",  
-        "late_neg",  "early_pos", "sero_date", "sero_event"]])
+    ndat = ndat[["IIntID", "late_neg_", "early_pos_"]]
+    return(ndat.to_numpy())
 
-def set_inc_data(dat, right_date='sero_date'):
+def imp_random(rtdat):
+    """Impute random dates in censored interval"""
+    idates = np.random.randint(rtdat[:, 1] + 1,  rtdat[:, 2])
+    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
+    ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
+    return(ndat)
+
+def set_inc_data(rtdat, imdat):
     """Create a dataset for calculating HIV incidence"""
+    dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
     dat['obs_end'] = np.where(dat["sero_event"]==1, 
-            dat[right_date], dat['late_neg'])
+            dat['serodate'], dat['late_neg'])
     ndat = pd.DataFrame()
     ndat['IIntID'] = dat.IIntID
     ndat["startday"] = dat["obs_start"].dt.day_of_year
@@ -137,7 +136,7 @@ def agg_ptime(dat):
     ptime = pd.DataFrame(np.concatenate(ptime, axis=0), 
             columns = ['Year', 'Days'])
     agg_ptime = (ptime.groupby(ptime.Year). \
-            agg(Ptime = pd.NamedAgg('Days', sum)) / 365).round(1)
+            agg(Ptime = pd.NamedAgg('Days', sum)) / 365)
     return(agg_ptime)
 
 def agg_event(dat):
@@ -149,28 +148,28 @@ def calc_inc(events, ptimes, pyears = 100):
     inc = ( events.Events / ptimes.Ptime ) * pyears
     return(inc)
 
-def get_inc(rtdat):
-    imdat = imp_random(rtdat) 
-    sdat = set_inc_data(imdat)
+def get_inc(rtdat, predat):
+    imdat = imp_random(predat) 
+    sdat = set_inc_data(rtdat, imdat)
     ptimes = agg_ptime(sdat)
     events = agg_event(sdat)
     inc = calc_inc(events, ptimes)
     return(inc)
 
-def time_inc(rtdat, i = None, n = None):
+def time_inc(rtdat, predat, i = None, n = None):
     if (i is not None): 
         j = (i + 1) / n
         sys.stdout.write('\r')
         sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
         sys.stdout.flush()
         sleep(0.0005)
-    inc = get_inc(rtdat)
+    inc = get_inc(rtdat, predat)
     return(inc)
 
 
-def do_inc(rtdat, args):
+def do_inc(rtdat, predat, args):
     pool = mp.Pool(args.mcores) 
-    out = [pool.apply_async(time_inc, args = (rtdat, i, args.nsim)) 
+    out = [pool.apply_async(time_inc, args = (rtdat, predat, i, args.nsim)) 
             for i in range(args.nsim)]
     inc = [r.get() for r in out]
     pool.close()
