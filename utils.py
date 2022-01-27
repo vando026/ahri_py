@@ -168,6 +168,6 @@ def do_inc(rtdat, predat, args):
             for i in range(args.nsim)]
     inc = [r.get() for r in out]
     pool.close()
-    inc = pd.concat(inc, axis = 1)
+    inc = np.concatenate(inc, axis = 1)
     inc = inc.agg(np.mean, axis = 1)
     return(inc)
