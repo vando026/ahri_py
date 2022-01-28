@@ -27,6 +27,10 @@ def get_hiv(args):
     dat = pd.read_pickle(args.root.hiv_pkl)
     return(dat)
 
+def get_epi(args):
+    """Read the pickled Surveillance dataset"""
+    dat = pd.read_pickle(args.root.epi_pkl)
+    return(dat)
 
 def set_age(dat, args):
     """Function to set age by arguments"""
@@ -35,7 +39,6 @@ def set_age(dat, args):
         dat = dat[~((dat.Female == args.sex[s]) & (dat.Age > args.age[s][1]))]
     return(dat)
 
-
 def set_data(dat, args):
     """Function to set age, sex, and year by arguments"""
     dat = set_age(dat, args)
@@ -43,13 +46,19 @@ def set_data(dat, args):
             dat.Year.isin(args.years)]
     return(dat)
 
-
 def set_hiv(args, dat = None):
     """Set the HIV data according to arguments"""
     if (dat is None):
         dat = get_hiv(args)
     dat = set_data(dat, args)
+
+def set_epi(args, dat = None):
+    """Set the Surveillence data according to arguments"""
+    if (dat is None):
+        dat = get_epi(args)
+    dat = set_data(dat, args)
     return(dat)
+return(dat)
 
 
 def get_dates(f):
@@ -107,13 +116,13 @@ def set_inc_data(rtdat, imdat):
     dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
     dat['obs_end'] = np.where(dat["sero_event"]==1, 
             dat['serodate'], dat['late_neg'])
-    ndat = np.array([dat.IIntID, 
+    idat = np.array([dat.IIntID, 
         dat["obs_start"].dt.day_of_year,
         dat['obs_end'].dt.day_of_year,
         dat["obs_start"].dt.year,
         dat['obs_end'].dt.year,
         dat["sero_event"]])
-    return(ndat.T)
+    return(idat.T)
 
 
 def agg_inc(di, events, ptimes):
@@ -147,12 +156,11 @@ def get_inc(rtdat, predat, events, ptimes):
 
 def time_inc(rtdat, predat, events, ptimes, i, n):
     """Add timer to the calculate inc rate function"""
-    if (i is not None): 
-        j = (i + 1) / n
-        sys.stdout.write('\r')
-        sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-        sys.stdout.flush()
-        sleep(0.0005)
+    j = (i + 1) / n
+    sys.stdout.write('\r')
+    sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+    sys.stdout.flush()
+    # sleep(0.0005)
     # you have to reset random seed for each process
     np.random.seed()
     inc = get_inc(rtdat, predat, events, ptimes)
@@ -165,11 +173,10 @@ def do_inc(rtdat, predat, args):
     pool = mp.Pool(args.mcores) 
     out = [pool.apply_async(time_inc, 
         args = (rtdat, predat, events, ptimes, i, args.nsim)) 
-        for i in range(args.nsim)]
+            for i in range(args.nsim)]
     inc = np.array([r.get() for r in out]).T
-    pool.close()
-    pool.join()
+    pool.close(); pool.join()
     est = [np.mean(inc[i]) for i in range(inc.shape[0])]
     est = pd.DataFrame({'Year': list(events.keys()), 'Rate': est})
-    print(inc)
+    print('\n')
     return(est)

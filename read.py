@@ -37,9 +37,9 @@ class Pickle:
           'ResidencyBSIntId':'BSIntID',
           'AgeAtVisit':'Age',
           'Sex':'Female'})
-        hiv = hiv[hiv.Female.isin(['Female', 'Male'])]
         if (drop_tasp): 
           hiv = drop_tasp(self.paths.pip_pkl, hiv) 
+        hiv = hiv[hiv.Female.isin(['Female', 'Male'])]
         hiv = hiv.assign(Female = (hiv.Female=='Female').astype(int))
         hiv = hiv.sort_values(['IIntID', 'VisitDate'])
         if (drop15less):
@@ -52,88 +52,43 @@ class Pickle:
         print(f"File saved to {self.paths.hiv_pkl}\n")
         print(hiv.head())
 
-    # def epi_dta(self, drop_tasp = True, addvars = None):     
-    #     dat = pd.read_stata(self.paths.epifile)
-    #     breakpoint()
-
-    #     if ("CalendarYear" in dat.columns): 
-    #         print("ahri: Renaming CalendarYear to Year")
-    #         dat = dat.rename(columns = {'CalendarYear': 'Year'})
-    #     if ("ARTStartedDate" in dat.columns):
-    #         print("ahri: Renaming ARTStartedDate to EarliestARTInitDate")
-    #         dat = dat.rename(columns = {'ARTStartedDate': 'EarliestARTInitDate'})
-    #     dat = dat.rename(columns = {
-    #         'IIntID':'IndividualId', 'BSIntID':'LocationId', 
-    #         'Female':'Sex', 'ExpDays':'Days', 
-    #         'ObservationStart':'StartDate',
-    #         'ObservationEnd':'EndDate',
-    #         'AssetIndex':'ModerntAssetIdx'})
-    #     dcols = ['IIntID', 'BSIntID', 'Female', 'ExpDays',
-    #             'ObservationStart', 'ObservationEnd', 'Year',
-    #             'AssetIndex', 'Age', 'DoB', 'DoD', 
-    #             'InMigration', 'OutMigration', 'Resident', 
-    #             'OnART', 'EarliestARTInitDate']
-    #     if (addvars is not None)
-    #     dcols = np.array(dcols.append(addvars))
-    #     dcols = dcols.flatten()
-    #     dat = dat[dcols]
-    #     return(dat)
-
-
-
-#readEpisodes <- function(
-#  inFile=NULL, outFile=NULL, 
-#  dropTasP=TRUE, addVars=" ",
-#  write_rda=TRUE, nstart = 0, nrow=Inf) {
-#  #
-#  if (is.null(inFile)) {
-#    check_getFiles()
-#    inFile=getFiles()$epifile
-#  }
-#  if(is.null(outFile)) {
-#    check_getFiles()
-#    outFile=getFiles()$epi_rda
-#  }
-#  message(sprintf("ahri: Reading %s, this may take a while...", inFile))
-#  dat <- haven::read_dta(inFile, skip = nstart, n_max = nrow) 
-#  # Variable names changed from releases
-#  if ("CalendarYear" %in% names(dat)) {
-#    message("ahri: Renaming CalendarYear to Year")
-#    names(dat)[names(dat) == "CalendarYear"] <- "Year"
-#  } 
-#  if ("ARTStartedDate" %in% names(dat)) { 
-#    message("ahri: Renaming ARTStartedDate to EarliestARTInitDate")
-#    names(dat)[names(dat)=="ARTStartedDate"] <- "EarliestARTInitDate"
-#  }
-#  dat <- select(dat,
-#    IIntID=IndividualId, BSIntID=LocationId, 
-#    Female=Sex, Age, DoB, DoD,
-#    Year, ExpDays=Days,
-#    ObservationStart=StartDate,
-#    ObservationEnd=EndDate,
-#    InMigration, OutMigration,
-#    Resident, AssetIndex=ModerntAssetIdx,
-#    OnART, EarliestARTInitDate, matches(addVars))
-#  dat <- filter(dat, Female %in% c(1,2))
-#  dat <- mutate(dat,
-#    IIntID=as.integer(IIntID),
-#    BSIntID=as.integer(BSIntID),
-#    Year=as.integer(Year),
-#    Female=as.integer(ifelse(Female==2, 1, 0)))
-#  if (dropTasP==TRUE) dat <- dropTasPData(dat)
-#  dat <- arrange(dat, IIntID, ObservationStart)
-#  if (write_rda) saveRDS(dat, outFile)
-#  dat
-#}
-    
-
-
+    def epi_dta(self, drop_tasp = True, addvars = None):     
+        print("Reading data, this may take time...")
+        dat = pd.read_stata(self.paths.epifile)
+        if ("CalendarYear" in dat.columns): 
+            dat = dat.rename(columns = {'CalendarYear': 'Year'})
+        if ("ARTStartedDate" in dat.columns):
+            dat = dat.rename(columns = {'ARTStartedDate': 'EarliestARTInitDate'})
+        dat = dat.rename(columns = {
+            'IndividualId':'IIntID', 'LocationId':'BSIntID', 
+            'Sex':'Female', 'Days':'ExpDays', 
+            'StartDate':'ObservationStart',
+            'EndDate':'ObservationEnd',
+            'ModerntAssetIdx':'AssetIndex'})
+        dcols = ['IIntID', 'BSIntID', 'Female', 'ExpDays',
+                'ObservationStart', 'ObservationEnd', 'Year',
+                'AssetIndex', 'Age', 'DoB', 'DoD', 
+                'InMigration', 'OutMigration', 'Resident', 
+                'OnART', 'EarliestARTInitDate']
+        if (addvars is not None):
+            dcols = [dcols, addvars]
+            dcols = [col for slist in dcols for col in slist]
+        dat = dat[dcols]
+        dat = dat[dat.Female.isin(['Female', 'Male'])]
+        dat = dat.assign(Female = (dat.Female=='Female').astype(int))
+        # dat = dat.sort_values(['IIntID', 'ObservationStart'])
+        if (drop_tasp): 
+          dat = drop_tasp(self.paths.pip_pkl, dat) 
+        dat.to_pickle(self.paths.epi_pkl)
+        print(f"File saved to {self.paths.epi_pkl}\n")
+        print(dat.head())
 
 
 if __name__ == "__main__":
-    from ahri.args import SetFiles, SetArgs
+    from ahri.args import *
+    from ahri.read import Pickle
     getfiles = SetFiles('/home/alain/Seafile/AHRI_Data/2020')
     dall = SetArgs(root = p2020)
-    dat = ahri.read.Pickle(getfiles)
-    hiv1 = get_hiv(dall)
-
+    dat = Pickle(getfiles)
+    dat.hiv_dta()
+    dat.epi_dta()
