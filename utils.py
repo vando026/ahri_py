@@ -107,17 +107,16 @@ def set_inc_data(rtdat, imdat):
     dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
     dat['obs_end'] = np.where(dat["sero_event"]==1, 
             dat['serodate'], dat['late_neg'])
-    ndat = pd.DataFrame()
-    ndat['IIntID'] = dat.IIntID
-    ndat["startday"] = dat["obs_start"].dt.day_of_year
-    ndat["endday"] = dat['obs_end'].dt.day_of_year
-    ndat["startyear"] = dat["obs_start"].dt.year
-    ndat["endyear"] = dat['obs_end'].dt.year
-    ndat["event"] = dat["sero_event"]
-    return(ndat.to_numpy())
+    ndat = np.array([dat.IIntID, 
+        dat["obs_start"].dt.day_of_year,
+        dat['obs_end'].dt.day_of_year,
+        dat["obs_start"].dt.year,
+        dat['obs_end'].dt.year,
+        dat["sero_event"]])
+    return(ndat.T)
 
 
-def agg_inc(di):
+def agg_inc(di, events, ptimes):
     """Get the person-time contributions"""
     syear = di[3]
     eyear = di[4]
@@ -135,17 +134,19 @@ def agg_inc(di):
                 ptimes[y] += 365
 
 
-def get_inc(rtdat, predat):
+def get_inc(rtdat, predat, events, ptimes):
     """Calculate inc rate by person years"""
     imdat = imp_random(predat) 
     sdat = set_inc_data(rtdat, imdat)
+    # use cython version for agg_inc
     for i in range(sdat.shape[0]):
-        agg_inc(sdat[i]) 
+        agg_incx(sdat[i], events, ptimes) 
     inc = [(events[x] / (ptimes[x] / 365)) * 100 
             for x in events.keys()]
     return(inc)
 
-def time_inc(rtdat, predat, i, n):
+def time_inc(rtdat, predat, events, ptimes, i, n):
+    """Add timer to the calculate inc rate function"""
     if (i is not None): 
         j = (i + 1) / n
         sys.stdout.write('\r')
@@ -154,23 +155,21 @@ def time_inc(rtdat, predat, i, n):
         sleep(0.0005)
     # you have to reset random seed for each process
     np.random.seed()
-    inc = get_inc(rtdat, predat)
+    inc = get_inc(rtdat, predat, events, ptimes)
     return(inc)
 
 
 def do_inc(rtdat, predat, args):
-    global ptimes 
     ptimes = {x:0 for x in range(np.min(args.years), np.max(args.years) + 1)}
-    global events 
     events = ptimes.copy()
     pool = mp.Pool(args.mcores) 
-    out = [pool.apply_async(time_inc,
-        args = (rtdat, predat, i, args.nsim)) 
+    out = [pool.apply_async(time_inc, 
+        args = (rtdat, predat, events, ptimes, i, args.nsim)) 
         for i in range(args.nsim)]
-    # out = [time_inc(rtdat, predat, i, args.nsim) for i in range(args.nsim)]
     inc = np.array([r.get() for r in out]).T
     pool.close()
     pool.join()
     est = [np.mean(inc[i]) for i in range(inc.shape[0])]
     est = pd.DataFrame({'Year': list(events.keys()), 'Rate': est})
+    print(inc)
     return(est)
