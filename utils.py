@@ -51,6 +51,7 @@ def set_hiv(args, dat = None):
     if (dat is None):
         dat = get_hiv(args)
     dat = set_data(dat, args)
+    return(dat)
 
 def set_epi(args, dat = None):
     """Set the Surveillence data according to arguments"""
@@ -58,7 +59,6 @@ def set_epi(args, dat = None):
         dat = get_epi(args)
     dat = set_data(dat, args)
     return(dat)
-return(dat)
 
 
 def get_dates(f):

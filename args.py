@@ -6,8 +6,10 @@ import numpy as np
 import multiprocessing as mp
 
 class SetFiles:
+
     def setpath(self, x): 
         return os.path.join(self.root, x)
+
     def __init__(self, root="~"):
         self.root = root
         self.hivfile = self.setpath("RD05-99 ACDIS HIV All.dta")
@@ -21,6 +23,13 @@ class SetFiles:
         self.mgh_pkl = self.setpath("python/ACDIS_MGH_ALL.pkl") 
         self.bsc_pkl = self.setpath("python/ACDIS_BoundedStructures.pkl")
         self.pip_pkl = self.setpath("python/ACDIS_PIP.pkl")
+
+    def show_read(self): 
+        print(self.hivfile, self.epifile, self.bsifile, sep = "\n")
+
+    def show_pkl(self): 
+        print(self.hiv_pkl, self.epi_pkl, self.pip_pkl, sep = "\n")
+
 
 
 class SetArgs:
