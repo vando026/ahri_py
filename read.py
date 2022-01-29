@@ -54,7 +54,7 @@ class Pickle:
         print(f"File saved to {self.paths.hiv_pkl}\n")
         return(hiv)
 
-    def epi_dta(self, drop_tasp = True, addvars = None, read  ;):     
+    def epi_dta(self, drop_tasp = True, addvars = None):     
         print("Reading data, this may take time...")
         dat = pd.read_stata(self.paths.epifile)
         if ("CalendarYear" in dat.columns): 
@@ -81,7 +81,7 @@ class Pickle:
         # dat = dat.sort_values(['IIntID', 'ObservationStart'])
         if (drop_tasp): 
           dat = utils.drop_tasp(self.paths.pip_pkl, dat) 
-        dat.to_pickle(self.paths.epi_pk)
+        dat.to_pickle(self.paths.epi_pkl)
         print(f"File saved to {self.paths.epi_pkl}\n")
         return(dat)
     

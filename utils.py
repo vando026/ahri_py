@@ -10,6 +10,7 @@ from datetime import datetime
 from functools import reduce
 import multiprocessing as mp
 from ahri.ahri.ptime import agg_incx
+from ahri.args import SetFiles
 from time import sleep
 import sys
 
@@ -19,17 +20,16 @@ def drop_tasp(file, dat):
   dat = pd.merge(dat, pipdat, on="BSIntID", how='left')
   dat = dat[dat['PIPSA'].isin(["Southern PIPSA", np.nan])]
   dat = dat.drop(['PIPSA'], axis=1)
-  return dat
+  return(dat)
 
-
-def get_hiv(args):
+def get_hiv(path = SetFiles().hiv_pkl):
     """Read the pickled HIV dataset"""
-    dat = pd.read_pickle(args.root.hiv_pkl)
+    dat = pd.read_pickle(path)
     return(dat)
 
-def get_epi(args):
+def get_epi(path = SetFiles().epi_pkl):
     """Read the pickled Surveillance dataset"""
-    dat = pd.read_pickle(args.root.epi_pkl)
+    dat = pd.read_pickle(path)
     return(dat)
 
 def set_age(dat, args):

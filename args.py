@@ -1,6 +1,8 @@
+"""
 ## Description: function to set Args
 ## Project: ahri_py
 ## Author: AV / Created: 17Jan2022 
+"""
 import os
 import numpy as np
 import multiprocessing as mp
@@ -33,16 +35,13 @@ class SetFiles:
 
 
 class SetArgs:
-    def __init__(self, root = "~",
+    def __init__(self, 
+        paths = SetFiles(),
         years = np.arange(2005, 2020),
         age = {"Fem": [15, 49], "Mal": [15, 54]}, 
         agecat = None, ageby = 5,
         nsim = 1, imputeMethod = None,
-        aname = 'filename',
-        mcores = mp.cpu_count(),
-        # setFun = identity,
-        # addVars = identity,
-        more_args = None):
+        mcores = mp.cpu_count()):
         # set age cat
         if (agecat is None):
             self.agecat = np.arange(np.min(list(age.values())),

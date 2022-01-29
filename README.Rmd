@@ -24,7 +24,7 @@ found in the links below. The help files are organised as follows:
   https://github.com/vando026/ahri_py/wiki/1-Getting-started
 
 - Reading and writing the datasets, which describes the class and functions for performing these
-  operations.  https://github.com/vando026/ahri_py/wiki/2-Read-functions
+  operations.  https://github.com/vando026/ahri_py/wiki/2-Pickle-methods
 
 - Set functions, which describes a range of functions for processing the data, subsetting the data, and other data tasks. 
   https://github.com/vando026/ahri_py/wiki/3-Set-functions
