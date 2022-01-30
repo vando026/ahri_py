@@ -29,12 +29,9 @@ found in the links below. The help files are organised as follows:
 - Set functions, which describes a range of functions for processing the data, subsetting the data, and other data tasks. 
   https://github.com/vando026/ahri_py/wiki/3-Set-classes-and-methods
 
-- Make and get datasets, which describes a range of functions for performing these
-  operations. (Documentation ongoing.) https://github.com/vando026/ahri_py/wiki/4-Make-and-get-variables
-
 - Functions to make the HIV incidence datasets, impute the
   seroconversion dates, perform multiple imputation, and calculate annual HIV incidence.
-  https://github.com/vando026/ahri/wiki_py/5A-HIV-functions
+  https://github.com/vando026/ahri/wiki_py/5-HIV-incidence
 
 - If you have questions or wish to contribute to code, post them as an issue so that I can answer. (https://help.github.com/en/github/managing-your-work-on-github/creating-an-issue)
 

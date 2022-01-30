@@ -30,14 +30,10 @@ follows:
     the data, subsetting the data, and other data tasks.
     <a href="https://github.com/vando026/ahri_py/wiki/3-Set-classes-and-methods" class="uri">https://github.com/vando026/ahri_py/wiki/3-Set-classes-and-methods</a>
 
--   Make and get datasets, which describes a range of functions for
-    performing these operations. (Documentation ongoing.)
-    <a href="https://github.com/vando026/ahri_py/wiki/4-Make-and-get-variables" class="uri">https://github.com/vando026/ahri_py/wiki/4-Make-and-get-variables</a>
-
 -   Functions to make the HIV incidence datasets, impute the
     seroconversion dates, perform multiple imputation, and calculate
     annual HIV incidence.
-    <a href="https://github.com/vando026/ahri/wiki_py/5A-HIV-functions" class="uri">https://github.com/vando026/ahri/wiki_py/5A-HIV-functions</a>
+    <a href="https://github.com/vando026/ahri/wiki_py/5-HIV-incidence" class="uri">https://github.com/vando026/ahri/wiki_py/5-HIV-incidence</a>
 
 -   If you have questions or wish to contribute to code, post them as an
     issue so that I can answer.

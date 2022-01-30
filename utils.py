@@ -157,28 +157,26 @@ def get_inc(rtdat, predat, events, ptimes):
             for x in events.keys()]
     return(inc)
 
+def time_inc(rtdat, predat, events, ptimes, i, args):
+    """Add timer to the calculate inc rate function"""
+    if (args.verbose):
+        j = (i + 1) / args.nsim
+        sys.stdout.write('\r')
+        sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+        sys.stdout.flush()
+        # sleep(0.0005)
+    # you have to reset random seed for each process
+    np.random.seed()
+    inc = get_inc(rtdat, predat, events, ptimes)
+    return(inc)
 
-def set_inc(rtdat, predat, args):
-    def action(i, events, ptimes):
-        """Add timer to the calculate inc rate function"""
-        if (args.verbose):
-            j = (i + 1) / args.nsim
-            sys.stdout.write('\r')
-            sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-            sys.stdout.flush()
-            # sleep(0.0005)
-        # you have to reset random seed for each process
-        np.random.seed()
-        inc = get_inc(rtdat, predat, events, ptimes)
-        return(inc)
-    return(action) 
 
 def do_inc(rtdat, predat, args):
     ptimes = {x:0 for x in range(np.min(args.years), np.max(args.years) + 1)}
     events = ptimes.copy()
     pool = mp.Pool(args.mcores) 
-    time_inc = set_inc(rtdat, predat, args)
-    out = [pool.apply_async(time_inc, args = (i, events, ptimes)) 
+    out = [pool.apply_async(time_inc, 
+        args = (rtdat, predat, events, ptimes, i, args)) 
             for i in range(args.nsim)]
     inc = np.array([r.get() for r in out]).T
     pool.close(); pool.join()
