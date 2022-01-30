@@ -31,7 +31,7 @@ found in the links below. The help files are organised as follows:
 
 - Functions to make the HIV incidence datasets, impute the
   seroconversion dates, perform multiple imputation, and calculate annual HIV incidence.
-  https://github.com/vando026/ahri/wiki_py/5-HIV-incidence
+  https://github.com/vando026/ahri/wiki_py/4-HIV-incidence
 
 - If you have questions or wish to contribute to code, post them as an issue so that I can answer. (https://help.github.com/en/github/managing-your-work-on-github/creating-an-issue)
 
