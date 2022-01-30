@@ -127,22 +127,23 @@ def set_inc_data(rtdat, imdat):
     return(idat.T)
 
 
-def agg_inc(di, events, ptimes):
-    """Get the person-time contributions"""
-    syear = di[3]
-    eyear = di[4]
-    sday = di[1]
-    eday = di[2]
-    sero = di[5]
-    events[eyear] += sero
-    if (eyear - syear == 0):
-        ptimes[eyear] += eday - sday
-    else:
-        ptimes[syear] += 365 - sday
-        ptimes[eyear] += eday
-        if (eyear - syear > 2):
-            for y in range(syear + 1, eyear): 
-                ptimes[y] += 365
+# This algorithm is implemented as a cython function 
+# def agg_inc(di, events, ptimes):
+#     """Get the person-time contributions"""
+#     syear = di[3]
+#     eyear = di[4]
+#     sday = di[1]
+#     eday = di[2]
+#     sero = di[5]
+#     events[eyear] += sero
+#     if (eyear - syear == 0):
+#         ptimes[eyear] += eday - sday
+#     else:
+#         ptimes[syear] += 365 - sday
+#         ptimes[eyear] += eday
+#         if (eyear - syear > 2):
+#             for y in range(syear + 1, eyear): 
+#                 ptimes[y] += 365
 
 
 def get_inc(rtdat, predat, events, ptimes):
@@ -156,25 +157,28 @@ def get_inc(rtdat, predat, events, ptimes):
             for x in events.keys()]
     return(inc)
 
-def time_inc(rtdat, predat, events, ptimes, i, n):
-    """Add timer to the calculate inc rate function"""
-    j = (i + 1) / n
-    sys.stdout.write('\r')
-    sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-    sys.stdout.flush()
-    # sleep(0.0005)
-    # you have to reset random seed for each process
-    np.random.seed()
-    inc = get_inc(rtdat, predat, events, ptimes)
-    return(inc)
 
+def set_inc(rtdat, predat, args):
+    def action(i, events, ptimes):
+        """Add timer to the calculate inc rate function"""
+        if (args.verbose):
+            j = (i + 1) / args.nsim
+            sys.stdout.write('\r')
+            sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+            sys.stdout.flush()
+            # sleep(0.0005)
+        # you have to reset random seed for each process
+        np.random.seed()
+        inc = get_inc(rtdat, predat, events, ptimes)
+        return(inc)
+    return(action) 
 
 def do_inc(rtdat, predat, args):
     ptimes = {x:0 for x in range(np.min(args.years), np.max(args.years) + 1)}
     events = ptimes.copy()
     pool = mp.Pool(args.mcores) 
-    out = [pool.apply_async(time_inc, 
-        args = (rtdat, predat, events, ptimes, i, args.nsim)) 
+    time_inc = set_inc(rtdat, predat, args)
+    out = [pool.apply_async(time_inc, args = (i, events, ptimes)) 
             for i in range(args.nsim)]
     inc = np.array([r.get() for r in out]).T
     pool.close(); pool.join()

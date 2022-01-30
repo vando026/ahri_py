@@ -41,6 +41,7 @@ class SetArgs:
         age = {"Fem": [15, 49], "Mal": [15, 54]}, 
         agecat = None, ageby = 5,
         nsim = 1, imputeMethod = None,
+        verbose = True,
         mcores = mp.cpu_count()):
         # set age cat
         if (agecat is None):
@@ -55,4 +56,5 @@ class SetArgs:
         self.nsim = nsim
         self.imputeMethod = imputeMethod
         self.mcores = mcores
+        self.verbose = verbose
         self.paths = paths
