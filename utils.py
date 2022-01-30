@@ -49,14 +49,14 @@ def set_data(dat, args):
 def set_hiv(args, dat = None):
     """Set the HIV data according to arguments"""
     if (dat is None):
-        dat = get_hiv(args)
+        dat = get_hiv(args.paths.hiv_pkl)
     dat = set_data(dat, args)
     return(dat)
 
 def set_epi(args, dat = None):
     """Set the Surveillence data according to arguments"""
     if (dat is None):
-        dat = get_epi(args)
+        dat = get_epi(args.paths.epi_pkl)
     dat = set_data(dat, args)
     return(dat)
 
@@ -74,7 +74,7 @@ get_dates_min = get_dates(min)
 get_dates_max = get_dates(max)
 
 
-def get_repeat_testers(dat, onlyRT = True):
+def get_repeat_testers(dat):
   """Get repeat tester data from an HIV test dataset"""
   obs_start = get_dates_min(dat, "HIVNegative", "obs_start")
   early_pos = get_dates_min(dat, "HIVPositive", "early_pos")
@@ -88,9 +88,6 @@ def get_repeat_testers(dat, onlyRT = True):
     pd.notna(dt.late_neg) & pd.notna(dt.early_pos)
   rt = dt[dt.late_neg_after==False]. \
     drop(['late_neg_after', 'late_pos'], axis=1)
-  if (onlyRT):
-    rt = rt[-(pd.isna(rt.obs_start) & pd.isna(rt.late_neg))] 
-    rt = rt[-((rt.obs_start == rt.late_neg) & pd.isna(rt.early_pos))]
   rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
   return(rt)
 

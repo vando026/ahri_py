@@ -54,9 +54,8 @@ class SetArgs:
         self.ageby = ageby
         self.nsim = nsim
         self.imputeMethod = imputeMethod
-        self.aname = aname
         self.mcores = mcores
-        self.root = root
+        self.paths = paths
 
 
 if __name__ == "main":
