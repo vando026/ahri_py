@@ -56,9 +56,3 @@ class SetArgs:
         self.imputeMethod = imputeMethod
         self.mcores = mcores
         self.paths = paths
-
-
-if __name__ == "main":
-    d2020 = SetFiles('/home/alain/Seafile/AHRI_Data/2020')
-    fem = SetArgs(root = d2020, age = {"Fem": [15, 49]})
-    print(fem.root.hivfile)

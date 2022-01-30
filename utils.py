@@ -75,21 +75,26 @@ get_dates_max = get_dates(max)
 
 
 def get_repeat_testers(dat):
-  """Get repeat tester data from an HIV test dataset"""
-  obs_start = get_dates_min(dat, "HIVNegative", "obs_start")
-  early_pos = get_dates_min(dat, "HIVPositive", "early_pos")
-  late_neg = get_dates_max(dat, "HIVNegative", "late_neg")
-  late_pos = get_dates_max(dat, "HIVPositive", "late_pos")
-  dat = dat[['IIntID', 'Female']].drop_duplicates()
-  dfs = [dat, obs_start, late_neg, early_pos, late_pos]
-  dt = reduce(lambda left,right: \
+    """Get repeat tester data from an HIV test dataset"""
+    obs_start = get_dates_min(dat, "HIVNegative", "obs_start")
+    early_pos = get_dates_min(dat, "HIVPositive", "early_pos")
+    late_neg = get_dates_max(dat, "HIVNegative", "late_neg")
+    late_pos = get_dates_max(dat, "HIVPositive", "late_pos")
+    dat = dat[['IIntID', 'Female']].drop_duplicates()
+    dfs = [dat, obs_start, late_neg, early_pos, late_pos]
+    dt = reduce(lambda left,right: \
     pd.merge(left,right,on='IIntID', how='left'), dfs)
-  dt['late_neg_after'] = (dt.late_neg > dt.early_pos) & \
+    # drop if late neg after early pos
+    dt['late_neg_after'] = (dt.late_neg > dt.early_pos) & \
     pd.notna(dt.late_neg) & pd.notna(dt.early_pos)
-  rt = dt[dt.late_neg_after==False]. \
+    rt = dt[dt.late_neg_after==False]. \
     drop(['late_neg_after', 'late_pos'], axis=1)
-  rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
-  return(rt)
+    # drop if no neg test
+    rt = rt[-(pd.isna(rt.obs_start) & pd.isna(rt.late_neg))] 
+    # drop if only 1 neg test and no pos test
+    rt = rt[-((rt.obs_start == rt.late_neg) & pd.isna(rt.early_pos))]
+    rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
+    return(rt)
 
 
 def pre_imp_set(rtdat, origin = datetime(1970, 1, 1)):
