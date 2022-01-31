@@ -42,8 +42,8 @@ def set_age(dat, args):
 def set_data(dat, args):
     """Function to set age, sex, and year by arguments"""
     dat = set_age(dat, args)
-    dat = dat[dat.Female.isin(list(args.sex.values())) & \
-            dat.Year.isin(args.years)]
+    dat = dat[dat.Female.isin(list(args.sex.values()))]
+    dat = dat[dat.Year.isin(args.years)]
     return(dat)
 
 def set_hiv(args, dat = None):
@@ -113,74 +113,3 @@ def imp_random(rtdat):
     ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
     return(ndat)
 
-def set_inc_data(rtdat, imdat):
-    """Create a dataset for calculating HIV incidence"""
-    dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
-    dat['obs_end'] = np.where(dat["sero_event"]==1, 
-            dat['serodate'], dat['late_neg'])
-    idat = np.array([dat.IIntID, 
-        dat["obs_start"].dt.day_of_year,
-        dat['obs_end'].dt.day_of_year,
-        dat["obs_start"].dt.year,
-        dat['obs_end'].dt.year,
-        dat["sero_event"]])
-    return(idat.T)
-
-
-# This algorithm is implemented as a cython function 
-# def agg_inc(di, events, ptimes):
-#     """Get the person-time contributions"""
-#     syear = di[3]
-#     eyear = di[4]
-#     sday = di[1]
-#     eday = di[2]
-#     sero = di[5]
-#     events[eyear] += sero
-#     if (eyear - syear == 0):
-#         ptimes[eyear] += eday - sday
-#     else:
-#         ptimes[syear] += 365 - sday
-#         ptimes[eyear] += eday
-#         if (eyear - syear > 2):
-#             for y in range(syear + 1, eyear): 
-#                 ptimes[y] += 365
-
-
-def get_inc(rtdat, predat, events, ptimes):
-    """Calculate inc rate by person years"""
-    imdat = imp_random(predat) 
-    sdat = set_inc_data(rtdat, imdat)
-    # use cython version for agg_inc
-    for i in range(sdat.shape[0]):
-        agg_incx(sdat[i], events, ptimes) 
-    inc = [(events[x] / (ptimes[x] / 365)) * 100 
-            for x in events.keys()]
-    return(inc)
-
-def time_inc(rtdat, predat, events, ptimes, i, args):
-    """Add timer to the calculate inc rate function"""
-    if (args.verbose):
-        j = (i + 1) / args.nsim
-        sys.stdout.write('\r')
-        sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-        sys.stdout.flush()
-        # sleep(0.0005)
-    # you have to reset random seed for each process
-    np.random.seed()
-    inc = get_inc(rtdat, predat, events, ptimes)
-    return(inc)
-
-
-def do_inc(rtdat, predat, args):
-    ptimes = {x:0 for x in range(np.min(args.years), np.max(args.years) + 1)}
-    events = ptimes.copy()
-    pool = mp.Pool(args.mcores) 
-    out = [pool.apply_async(time_inc, 
-        args = (rtdat, predat, events, ptimes, i, args)) 
-            for i in range(args.nsim)]
-    inc = np.array([r.get() for r in out]).T
-    pool.close(); pool.join()
-    est = [np.mean(inc[i]) for i in range(inc.shape[0])]
-    est = pd.DataFrame({'Year': list(events.keys()), 'Rate': est})
-    print('\n')
-    return(est)
