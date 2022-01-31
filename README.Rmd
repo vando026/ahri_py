@@ -10,11 +10,11 @@ output:
 
 ## AHRI Python library
 
-The `ahri` Python library contains classes and functions for working with and analyzing
-the [Africa Health Research Institute (AHRI)](
-https://www.ahri.org/research/#research-department )  datasets. These functions can
-read in the AHRI .dta datasets, save them  pickle (.pkl) files, accept a list of arguments to standardize the analyses, subset the data, and calculate trends in HIV incidence. At this stage, work is focused on speeding up the estimation of the HIV incidence rate for the interval censored data using single random-point multiple imputation. This library is the Python version of the 
-[ahri R library](https://github.com/vando026/ahri), which has more functionality.
+The `ahri` Python library contains classes, methods and functions for working with
+and analyzing the [Africa Health Research Institute (AHRI)](
+https://www.ahri.org/research/#research-department )  datasets. These can read in the
+AHRI .dta datasets, save them  to pickle (.pkl) files, set and manange arguments to
+standardize and subset the data, and calculate trends in HIV incidence. This library is based on the [AHRI R library](https://github.com/vando026/ahri), but work is focused on speeding up the HIV incidence calculations. 
 
 The wiki help pages serve as a short introduction to the `ahri` library. These can be
 found in the links below. The help files are organised as follows:
