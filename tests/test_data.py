@@ -1,29 +1,32 @@
 import unittest
 import sys
-from ahri.utils import *
+from ahri import utils
 from ahri.args import SetFiles, SetArgs
+from ahri.dataproc import DataProc
+from ahri.api import API
 import numpy as np
 
 class TestAHRI(unittest.TestCase):
 
     root = '/home/alain/Seafile/AHRI_Data/2020'
-    paths = SetFiles(root)
-    args = SetArgs(paths = paths,
+    args = SetArgs(root = root,
         years = np.arange(2005, 2020))
-    hdat = get_hiv(paths.hiv_pkl)
-    sdat = set_hiv(args)
+    testy = API(args)
+    hdat = testy.data_proc.get_hiv()
+    sdat = testy.data_proc.set_hiv()
+    rtdat = testy.data_proc.get_repeat_testers(sdat)
 
     def test_hiv_nrows(self):
         nrows = self.hdat.shape[0]
-        self.assertEqual(nrows, 168196)
+        self.assertEqual(nrows, 185243)
 
     def test_hivpos_n(self):
         hiv_vals = self.hdat.HIVPositive.count()
-        self.assertEqual(hiv_vals, 42507)
+        self.assertEqual(hiv_vals, 47861)
 
     def test_fem_n(self):
         fem_n = self.hdat.Female[self.hdat.Female == 1].count()
-        self.assertEqual(fem_n, 112973)
+        self.assertEqual(fem_n, 125836)
 
     def test_hiv_nrows2(self):
         nrows = self.sdat.shape[0]
@@ -36,6 +39,18 @@ class TestAHRI(unittest.TestCase):
     def test_hiv_year(self):
         year = np.mean(self.sdat.Year).round(3)
         self.assertEqual(year, 2011.937)
+
+    def test_hiv_year(self):
+        year = np.mean(self.sdat.Year).round(3)
+        self.assertEqual(year, 2011.937)
+
+    def test_rt_nrow(self):
+        nrow = self.rtdat.shape[0]
+        self.assertEqual(nrow, 20994)
+
+    def test_rt_sero(self):
+        nval = self.rtdat.sero_event.sum()
+        self.assertEqual(nval, 3176)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

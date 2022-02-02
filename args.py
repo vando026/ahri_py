@@ -1,8 +1,3 @@
-"""
-## Description: function to set Args
-## Project: ahri_py
-## Author: AV / Created: 17Jan2022 
-"""
 import os
 import numpy as np
 import multiprocessing as mp
@@ -12,7 +7,7 @@ class SetFiles:
     def setpath(self, x): 
         return os.path.join(self.root, x)
 
-    def __init__(self, root="~"):
+    def __init__(self, root = "~"):
         self.root = root
         self.hivfile = self.setpath("RD05-99 ACDIS HIV All.dta")
         self.epifile = self.setpath("SurveillanceEpisodes.dta")
@@ -25,6 +20,13 @@ class SetFiles:
         self.mgh_pkl = self.setpath("python/ACDIS_MGH_ALL.pkl") 
         self.bsc_pkl = self.setpath("python/ACDIS_BoundedStructures.pkl")
         self.pip_pkl = self.setpath("python/ACDIS_PIP.pkl")
+        # Check if folder exists
+        # TODO: allow user to change its name
+        if (os.path.exists(os.path.join(root, 'python'))):
+            pass
+        else:
+            raise Exception(print(f"First create directory {root}/python"))
+
 
     def show_read(self): 
         print(self.hivfile, self.epifile, self.bsifile, sep = "\n")
@@ -34,12 +36,14 @@ class SetFiles:
 
 
 
+
 class SetArgs:
     def __init__(self, 
-        paths = SetFiles(),
+        root = "/home/alain/",
         years = np.arange(2005, 2020),
         age = {"Fem": [15, 49], "Mal": [15, 54]}, 
         agecat = None, ageby = 5,
+        drop_tasp = True,
         nsim = 1, imputeMethod = None,
         verbose = True,
         mcores = mp.cpu_count()):
@@ -57,4 +61,5 @@ class SetArgs:
         self.imputeMethod = imputeMethod
         self.mcores = mcores
         self.verbose = verbose
-        self.paths = paths
+        self.drop_tasp = drop_tasp
+        self.paths = SetFiles(root = root)

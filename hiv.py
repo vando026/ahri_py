@@ -35,6 +35,10 @@ def set_inc_data(rtdat, imdat):
 #                 ptimes[y] += 365
 
 
+def get_inc_mid(rtdat, predat, events, ptimes):
+    imdat = imp_midpoint(predat) 
+
+
 def get_inc(rtdat, predat, events, ptimes):
     """Calculate inc rate by person years"""
     imdat = imp_random(predat) 
