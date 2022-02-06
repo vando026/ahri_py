@@ -10,11 +10,11 @@ class DataProc(SetArgs):
 
     def pip_dta(self):
         """ Read in PIP data to identify ACIDS from TASP areas"""
-        dat = pd.read_stata(self.args.paths.bsifile, 
+        dat = pd.read_stata(self.args.bsifile, 
                 columns = ['BSIntId', 'PIPSA'])
         dat = dat.rename(columns = {'BSIntId': 'BSIntID'})
-        dat.to_pickle(self.args.paths.pip_pkl)
-        print(f"File saved to {self.args.paths.pip_pkl}\n")
+        dat.to_pickle(self.args.pip_pkl)
+        print(f"File saved to {self.args.pip_pkl}\n")
         return(dat)
 
     def hiv_dta(self):
@@ -23,14 +23,12 @@ class DataProc(SetArgs):
               "HIVResult", "Sex", "AgeAtVisit"]
         # if (addvars is not None):
             # dcols = dcols.append(addvars)
-        hiv = pd.read_stata(self.args.paths.hivfile, columns = dcols)
+        hiv = pd.read_stata(self.args.hivfile, columns = dcols)
         hiv = hiv.rename(columns = {
           'IIntId':'IIntID',
           'ResidencyBSIntId':'BSIntID',
           'AgeAtVisit':'Age',
           'Sex':'Female'})
-        # if (drop_tasp): 
-          # hiv = utils.drop_tasp(self.args.paths.pip_pkl, hiv) 
         hiv = hiv[hiv.Female.isin(['Female', 'Male'])]
         hiv = hiv.assign(Female = (hiv.Female=='Female').astype(int))
         hiv = hiv.sort_values(['IIntID', 'VisitDate'])
@@ -38,13 +36,13 @@ class DataProc(SetArgs):
         hiv['HIVNegative'] = hiv.VisitDate[hiv.HIVResult == 'Negative']
         hiv['HIVPositive'] = hiv.VisitDate[hiv.HIVResult == 'Positive']
         hiv['Year'] = pd.DatetimeIndex(hiv.VisitDate).year
-        hiv.to_pickle(self.args.paths.hiv_pkl)
-        print(f"File saved to {self.args.paths.hiv_pkl}\n")
+        hiv.to_pickle(self.args.hiv_pkl)
+        print(f"File saved to {self.args.hiv_pkl}\n")
         return(hiv)
 
     def epi_dta(self, addvars = None):     
         print("Reading data, this may take time...")
-        dat = pd.read_stata(self.args.paths.epifile)
+        dat = pd.read_stata(self.args.epifile)
         if ("CalendarYear" in dat.columns): 
             dat = dat.rename(columns = {'CalendarYear': 'Year'})
         if ("ARTStartedDate" in dat.columns):
@@ -68,24 +66,24 @@ class DataProc(SetArgs):
         dat = dat.assign(Female = (dat.Female=='Female').astype(int))
         # dat = dat.sort_values(['IIntID', 'ObservationStart'])
         # if (drop_tasp): 
-          # dat = utils.drop_tasp(self.args.paths.pip_pkl, dat) 
-        dat.to_pickle(self.args.paths.epi_pkl)
-        print(f"File saved to {self.args.paths.epi_pkl}\n")
+          # dat = utils.drop_tasp(self.args.pip_pkl, dat) 
+        dat.to_pickle(self.args.epi_pkl)
+        print(f"File saved to {self.args.epi_pkl}\n")
         return(dat)
 
     def get_hiv(self):
         """Read the pickled HIV dataset"""
-        dat = pd.read_pickle(self.args.paths.hiv_pkl)
+        dat = pd.read_pickle(self.args.hiv_pkl)
         return(dat)
 
     def get_epi(self):
         """Read the pickled Surveillance dataset"""
-        dat = pd.read_pickle(self.args.paths.epi_pkl)
+        dat = pd.read_pickle(self.args.epi_pkl)
         return(dat)
 
     def get_pip(self):
         """Read the pickled PIP areas dataset"""
-        dat = pd.read_pickle(self.args.paths.pip_pkl)
+        dat = pd.read_pickle(self.args.pip_pkl)
         return(dat)
 
     def set_data(self, dat):

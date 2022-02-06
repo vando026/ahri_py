@@ -63,4 +63,3 @@ class SetArgs(SetFiles):
         self.verbose = verbose
         self.drop_tasp = drop_tasp
         SetFiles.__init__(self, root)
-        # self.paths = SetFiles(root = root)
