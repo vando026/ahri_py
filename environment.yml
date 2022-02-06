@@ -1,0 +1,12 @@
+name: ahri_dev
+dependencies:
+  - python=3.8   
+  - numpy
+  - pandas=1.2.3
+  - tomli
+  - ipython
+  - packaging
+  - pep517
+  - twine
+  - jupyter
+  - statsmodels
