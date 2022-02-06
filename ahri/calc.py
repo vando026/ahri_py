@@ -1,6 +1,7 @@
 from ahri.dataproc import DataProc
 from ahri.utils import *
 import statsmodels.api as sm
+import scipy
 
 def prep_for_split(rtdat, imdat):
     """Prepare a dataset for splitting into episodes"""
@@ -49,17 +50,19 @@ def get_ptime_long(di):
     out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
     return(out.T)
 
-def split_data(predat, bdat):
+def split_data(predat, bdat, args):
     """Split repeat-tester data into episodes""" 
     edat = [get_ptime_long(predat[di]) for di in range(predat.shape[0])]
     mdat = pd.DataFrame(np.vstack(edat), 
             columns = ["IIntID", "Year", "Days", "Event"])
-    mdat['tscale'] = mdat["Days"] / 365
-    mdat = mdat[mdat['tscale'] != 0]
-    mdat['tscale'] = np.log(mdat['tscale'])
-    mdat = pd.merge(mdat, bdat, how = 'inner', on = "IIntID")
-    mdat['Age'] = mdat['Year'] - mdat["YoB"]
-    return(mdat[["IIntID", "Year",  "Event", "tscale", "Age"]])
+    mdat["PYears"] = mdat["Days"] / 365
+    mdat = mdat[mdat['PYears'] != 0]
+    mdat["tscale"] = np.log(mdat["PYears"])
+    mdat = pd.merge(mdat, bdat, how = "inner", on = "IIntID")
+    mdat["Age"] = mdat["Year"] - mdat["YoB"]
+    mdat["AgeCat"] = pd.cut(mdat["Age"], 
+            bins = args.agecat, include_lowest=True)
+    return(mdat.drop(["Days", "DoB", "YoB"], axis = 1))
 
 def set_post_imp(im):
     """Prepare dataset after imputation for models""" 
@@ -147,6 +150,44 @@ def calc_pois(dat, ndat, formula = "Event ~ -1"):
     return(res.summary_frame())
 
 
+def age_adjust(count, pop, stpop, year, conf_level = 0.95):
+    """Use gamma distribution and direct method for incidence rates"""
+    rate = count / pop
+    cruderate = np.sum(count) / np.sum(pop)
+    stdwt = stpop / np.sum(stpop)
+    dsr = np.sum(stdwt * rate)
+    dsr_var = sum((stdwt**2) * (count/pop**2))
+    wm = np.max(stdwt / pop)
+    alpha = 1 - conf_level
+    gamma_lci = scipy.stats.gamma.ppf(alpha/2,
+            a = (dsr**2)/dsr_var, scale = dsr_var/dsr)
+    gamma_uci = scipy.stats.gamma.ppf(1 - alpha/2, 
+            a = ((dsr + wm)**2) / 
+            (dsr_var + wm**2), scale = (dsr_var + wm**2)/(dsr + wm))
+    # res = {"rate": dsr, "crude": cruderate, "var": dsr_var, 
+            # "lci": gamma_lci, "uci": gamma_uci }
+    res = [year, dsr, dsr_var, gamma_lci, gamma_uci]
+    return(res)
+
+
+def calc_gamma(split_dat, pop_dat):
+    agg_dat = split_dat.groupby(["Year", "AgeCat"]).agg(
+            Events = pd.NamedAgg("Event", sum),
+            PYears = pd.NamedAgg("PYears", sum)
+            ).reset_index()
+    agg_dat = pd.merge(agg_dat, pop_dat, how = "left",
+            on = ["Year", "AgeCat"])
+    out = []
+    for year in np.unique(agg_dat.Year.values):
+        out.append(age_adjust(
+            agg_dat.loc[agg_dat.Year == year, "Events"],
+            agg_dat.loc[agg_dat.Year == year, "PYears"],
+            agg_dat.loc[agg_dat.Year == year, "N"], year))
+    out = np.vstack(out)
+    return(out)
+
+
+
 class CalcInc(DataProc):
     def __init__(self, args):
         DataProc.__init__(self, args)
@@ -158,18 +199,33 @@ class CalcInc(DataProc):
         self.pdat_yr_age = pred_dat_age_year(self.edat)
         self.adjust_form = "Event ~ -1 + C(Year) + Age + C(Year):Age"
         self.unadjust_form = "Event ~ -1 + C(Year)"
+        self.pop_n = get_pop_n(self.edat, self.args)
 
-    def calc_inc_mid(self, age_adjust = True):
-        """Calculate HIV incidence using mid-point imputation"""
+    def pois_mid(self, age_adjust = True):
+        """Poisson HIV incidence using mid-point imputation"""
         pdat = prep_for_imp(self.rtdat)
         imdat = imp_midpoint(pdat) 
         sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.bdat)
-        if (age_adjusted):
+        mdat = split_data(sdat, self.bdat, self.args)
+        if (age_adjust):
             ndat = self.pdat_yr_age 
             f1 = self.adjust_form
         else:
             ndat = self.pdat_yr
             f1 = self.unadjust_form
         res = calc_pois(mdat, ndat, f1)
+        return(res)
+
+    def gamma_mid(self, age_adjust = True):
+        """Gamma HIV incidence using mid-point imputation"""
+        pdat = prep_for_imp(self.rtdat)
+        imdat = imp_midpoint(pdat) 
+        sdat = prep_for_split(self.rtdat, imdat)
+        mdat = split_data(sdat, self.bdat, self.args)
+        if (age_adjust == False):
+            self.pop_n["N"] = 1 
+        breakpoint()
+        res = calc_gamma(mdat, self.pop_n)
+        res = pd.DataFrame(res, 
+                columns = ["Year", "Rate", "Var", "LCI", "UCI"])
         return(res)

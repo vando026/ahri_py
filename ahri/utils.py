@@ -76,7 +76,7 @@ def imp_midpoint(rtdat):
     return(ndat)
 
 def pred_dat_year(args):
-    """Make a dataset of year for statsmodels predict"""
+    """Make a year, tscale dataset for statsmodels predict"""
     return(pd.DataFrame(
         {"Year": np.arange(np.min(args.years), np.max(args.years)),
         "tscale": 1}))
@@ -89,6 +89,12 @@ def pred_dat_age_year(dat):
     dat["tscale"] = 1
     return(dat)
 
-def get_pop_n(args, dat):
 
+def get_pop_n(edat, args):
+    """Get # of all participants by year and age group"""
+    edat['AgeCat'] = pd.cut(edat['Age'], 
+            bins = args.agecat, include_lowest=True)
+    gdat = edat.groupby(["Year", "AgeCat"]).agg(
+            N = pd.NamedAgg("IIntID", len)).reset_index()
+    return(gdat)
 

@@ -133,6 +133,4 @@ class DataProc(SetArgs):
         rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
         return(rt)
 
-    def get_age_year(self):
-        dat = self.set_epi() 
-        return(dat)
+
