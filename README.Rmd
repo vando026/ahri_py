@@ -24,14 +24,11 @@ found in the links below. The help files are organised as follows:
   https://github.com/vando026/ahri_py/wiki/1-Getting-started
 
 - Reading and writing the datasets, which describes the class and functions for performing these
-  operations.  https://github.com/vando026/ahri_py/wiki/2-Pickle-class-and-methods
-
-- Set functions, which describes a range of functions for processing the data, subsetting the data, and other data tasks. 
-  https://github.com/vando026/ahri_py/wiki/3-Set-classes-and-methods
+  operations.  https://github.com/vando026/ahri_py/wiki/2-DataProc-class-and-methods
 
 - Functions to make the HIV incidence datasets, impute the
   seroconversion dates, perform multiple imputation, and calculate annual HIV incidence.
-  https://github.com/vando026/ahri/wiki_py/4-HIV-incidence
+  https://github.com/vando026/ahri/wiki_py/3-HIV-incidence (still under development).
 
 - If you have questions or wish to contribute to code, post them as an issue so that I can answer. (https://help.github.com/en/github/managing-your-work-on-github/creating-an-issue)
 
