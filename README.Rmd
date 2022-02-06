@@ -13,8 +13,8 @@ output:
 The `ahri` Python library contains classes, methods and functions for working with
 and analyzing the [Africa Health Research Institute (AHRI)](
 https://www.ahri.org/research/#research-department )  datasets. These can read in the
-AHRI .dta datasets, save them  to pickle (.pkl) files, set and manange arguments to
-standardize and subset the data, and calculate trends in HIV incidence. This library is based on the [AHRI R library](https://github.com/vando026/ahri), but work is focused on speeding up the HIV incidence calculations. 
+AHRI .dta datasets, save them  to pickle (.pkl) files, set and manage arguments for
+data processing, and calculate trends in HIV incidence. This library is based on the [AHRI R library](https://github.com/vando026/ahri), but work is focused on speeding up the HIV incidence rate calculations. 
 
 The wiki help pages serve as a short introduction to the `ahri` library. These can be
 found in the links below. The help files are organised as follows:
@@ -39,6 +39,6 @@ found in the links below. The help files are organised as follows:
 +---------------------------------------------------------------------------------------+
 |Disclaimer: This is not an official AHRI site. The `ahri` library is a collaboration   |
 |between researchers using the AHRI datasets.  Decisions made in the code about how to  |
-|manage and analyze the data are independent of the views, opinions, and policies of    |
+|use the data are independent of the views, opinions, and policies of                   |
 |AHRI and its employees.                                                                |
 +---------------------------------------------------------------------------------------+

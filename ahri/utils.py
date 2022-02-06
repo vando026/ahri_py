@@ -3,9 +3,9 @@ import numpy as np
 from datetime import datetime
 from functools import reduce
 import multiprocessing as mp
-from ahri.ahri.ptime import agg_incx
+# from ahri.cyfiles import agg_incx
 from ahri.args import SetFiles
-from ahri.hiv import *
+# from ahri.hiv import *
 from time import sleep
 import sys
 
@@ -45,8 +45,12 @@ def get_dates(f):
 get_dates_min = get_dates(min)
 get_dates_max = get_dates(max)
 
-
-
+def get_birth_date(dat):
+    """Get birthdate and birthyear"""
+    dat = dat[["IIntID", "DoB"]]
+    dat = dat.drop_duplicates(["IIntID"])
+    dat['YoB'] = dat["DoB"].dt.year
+    return(dat)
 
 def pre_imp_set(rtdat, origin = datetime(1970, 1, 1)):
     ndat = rtdat[-pd.isna(rtdat['early_pos'])]
@@ -69,3 +73,19 @@ def imp_midpoint(rtdat):
     ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": mdates})
     ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
     return(ndat)
+
+def get_ptime_long(di):
+    """Get the person-time contributions"""
+    yi = np.arange(di[3], di[4] + 1, dtype = int)
+    ylen = len(yi)
+    ei = np.zeros(ylen)
+    ei[ylen - 1] = di[5]
+    if (ylen == 1):
+        ptime = di[2] - di[1]
+    else:
+        ptime = np.array([365 - di[1], di[2]], dtype = int)
+        if (ylen > 2):
+            ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
+    out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
+    return(out.T)
+

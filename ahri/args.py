@@ -25,7 +25,7 @@ class SetFiles:
         if (os.path.exists(os.path.join(root, 'python'))):
             pass
         else:
-            raise Exception(print(f"First create directory {root}/python"))
+            print(f"ahri: Warning! check if directory {root}/python exists")
 
 
     def show_read(self): 
@@ -37,7 +37,7 @@ class SetFiles:
 
 
 
-class SetArgs:
+class SetArgs(SetFiles):
     def __init__(self, 
         root = "/home/alain/",
         years = np.arange(2005, 2020),
@@ -62,4 +62,5 @@ class SetArgs:
         self.mcores = mcores
         self.verbose = verbose
         self.drop_tasp = drop_tasp
-        self.paths = SetFiles(root = root)
+        SetFiles.__init__(self, root)
+        # self.paths = SetFiles(root = root)
