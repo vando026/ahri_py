@@ -52,7 +52,8 @@ def get_birth_date(dat):
     dat['YoB'] = dat["DoB"].dt.year
     return(dat)
 
-def pre_imp_set(rtdat, origin = datetime(1970, 1, 1)):
+def prep_for_imp(rtdat, origin = datetime(1970, 1, 1)):
+    """Prepare rtdat for imputation"""
     ndat = rtdat[-pd.isna(rtdat['early_pos'])]
     ndat = ndat[["IIntID", "late_neg", "early_pos"]]
     ndat['late_neg_'] = (ndat['late_neg'] - origin).dt.days
@@ -74,18 +75,16 @@ def imp_midpoint(rtdat):
     ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
     return(ndat)
 
-def get_ptime_long(di):
-    """Get the person-time contributions"""
-    yi = np.arange(di[3], di[4] + 1, dtype = int)
-    ylen = len(yi)
-    ei = np.zeros(ylen)
-    ei[ylen - 1] = di[5]
-    if (ylen == 1):
-        ptime = di[2] - di[1]
-    else:
-        ptime = np.array([365 - di[1], di[2]], dtype = int)
-        if (ylen > 2):
-            ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
-    out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
-    return(out.T)
+def pred_dat_year(args):
+    """Make a dataset of year for statsmodels predict"""
+    return(pd.DataFrame(
+        {"Year": np.arange(np.min(args.years), np.max(args.years)),
+        "tscale": 1}))
 
+def pred_dat_age_year(dat):
+    """Make dataset of average age by year for statsmodels predict"""
+    dat = dat.groupby(["Year"]). \
+        agg(Age = pd.NamedAgg("Age", "mean")) 
+    dat.reset_index(inplace = True)
+    dat["tscale"] = 1
+    return(dat)

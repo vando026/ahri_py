@@ -88,6 +88,8 @@ class DataProc(SetArgs):
 
     def set_data(self, dat):
         """Function to set age, sex, and year by arguments"""
+        dat = dat[dat.Year.isin(self.args.years)]
+        dat = dat[dat.Female.isin(list(self.args.sex.values()))]
         if (self.args.drop_tasp): 
           dat = drop_tasp(dat, self.get_pip()) 
         for s in self.args.age.keys():
@@ -95,8 +97,6 @@ class DataProc(SetArgs):
                     (dat.Age < self.args.age[s][0]))] 
             dat = dat[~((dat.Female == self.args.sex[s]) &
                     (dat.Age > self.args.age[s][1]))]
-        dat = dat[dat.Female.isin(list(self.args.sex.values()))]
-        dat = dat[dat.Year.isin(self.args.years)]
         return(dat)
 
     def set_hiv(self):
@@ -136,23 +136,3 @@ class DataProc(SetArgs):
     def get_age_year(self):
         dat = self.set_epi() 
         return(dat)
-
-if __name__ == "__main__":
-
-    import ahri
-    from ahri.api import API
-    from ahri.dataproc import DataProc
-    # from ahri.hiv import CalcInc
-    from ahri.args import *
-    from ahri.utils import *
-    from ahri.ahri.ptime import agg_incx
-
-    args = SetArgs(root = '/home/alain/Seafile/AHRI_Data/2020')
-    tt = API(args)
-
-#     # tt.data_proc.pip_dta()
-    # print(tt.data_proc.get_hiv())
-#     # print(tt.data_proc.set_hiv())
-#     # print(tt.data_proc.set_epi())
-#     print(tt.data_proc.get_repeat_testers())
-#     # print
