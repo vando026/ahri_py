@@ -88,3 +88,7 @@ def pred_dat_age_year(dat):
     dat.reset_index(inplace = True)
     dat["tscale"] = 1
     return(dat)
+
+def get_pop_n(args, dat):
+
+
