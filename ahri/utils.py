@@ -1,13 +1,6 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime
-from functools import reduce
-import multiprocessing as mp
 # from ahri.cyfiles import agg_incx
-from ahri.args import SetFiles
-# from ahri.hiv import *
-from time import sleep
-import sys
 
 def drop_tasp(dat, pipdat = None):
   """Function to drop individuals who tested in TasP areas"""

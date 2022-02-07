@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from ahri.args import SetArgs
 from ahri.utils import *
-
+from functools import reduce
 
 class DataProc(SetArgs):
     def __init__(self, args):

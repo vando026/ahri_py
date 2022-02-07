@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import multiprocessing as mp
+# from ahri.calc import imp_midpoint, imp_random
 
 class SetFiles:
 
@@ -43,9 +44,8 @@ class SetArgs(SetFiles):
         years = np.arange(2005, 2020),
         age = {"Fem": [15, 49], "Mal": [15, 54]}, 
         agecat = None, ageby = 5,
-        drop_tasp = True,
-        nsim = 1, imputeMethod = None,
-        verbose = True,
+        drop_tasp = True, verbose = True,
+        nsim = 1, imp_method = None,
         mcores = mp.cpu_count()):
         # set age cat
         if (agecat is None):
@@ -58,7 +58,7 @@ class SetArgs(SetFiles):
         self.age = age
         self.ageby = ageby
         self.nsim = nsim
-        self.imputeMethod = imputeMethod
+        self.imp_method = imp_method
         self.mcores = mcores
         self.verbose = verbose
         self.drop_tasp = drop_tasp

@@ -1,21 +1,10 @@
+from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
 import statsmodels.api as sm
+import multiprocessing as mp
 import scipy
-
-def prep_for_split(rtdat, imdat):
-    """Prepare a dataset for splitting into episodes"""
-    dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
-    dat['obs_end'] = np.where(dat["sero_event"]==1, 
-            dat['serodate'], dat['late_neg'])
-    idat = np.array([dat.IIntID, 
-        dat["obs_start"].dt.day_of_year,
-        dat['obs_end'].dt.day_of_year,
-        dat["obs_start"].dt.year,
-        dat['obs_end'].dt.year,
-        dat["sero_event"]])
-    return(idat.T)
-
+import sys
 
 # This algorithm is implemented as a cython function 
 # def agg_inc(di, events, ptimes):
@@ -75,6 +64,21 @@ def get_ptime_long(di):
     out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
     return(out.T)
 
+
+def prep_for_split(rtdat, imdat):
+    """Prepare a dataset for splitting into episodes"""
+    dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
+    dat['obs_end'] = np.where(dat["sero_event"]==1, 
+            dat['serodate'], dat['late_neg'])
+    idat = np.array([dat.IIntID, 
+        dat["obs_start"].dt.day_of_year,
+        dat['obs_end'].dt.day_of_year,
+        dat["obs_start"].dt.year,
+        dat['obs_end'].dt.year,
+        dat["sero_event"]])
+    return(idat.T)
+
+
 def split_data(predat, bdat, args):
     """Split repeat-tester data into episodes""" 
     edat = [get_ptime_long(predat[di]) for di in range(predat.shape[0])]
@@ -94,7 +98,6 @@ def split_data(predat, bdat, args):
     return(dat)
 
 
-
 def calc_pois(dat, ndat, formula = "Event ~ -1"):
     """Calc incidence using Poisson model"""
     model = sm.GLM.from_formula(formula, 
@@ -111,15 +114,6 @@ def age_adjust(count, pop, stpop):
     stdwt = stpop / np.sum(stpop)
     dsr = np.sum(stdwt * rate)
     dsr_var = sum((stdwt**2) * (count/pop**2))
-    # wm = np.max(stdwt / pop)
-    # alpha = 1 - conf_level
-    # gamma_lci = scipy.stats.gamma.ppf(alpha/2,
-    #         a = (dsr**2)/dsr_var, scale = dsr_var/dsr)
-    # gamma_uci = scipy.stats.gamma.ppf(1 - alpha/2, 
-    #         a = ((dsr + wm)**2) / 
-    #         (dsr_var + wm**2), scale = (dsr_var + wm**2)/(dsr + wm))
-    # res = {"rate": dsr, "crude": cruderate, "var": dsr_var, 
-            # "lci": gamma_lci, "uci": gamma_uci }
     res = [dsr, dsr_var]
     return(res)
 
@@ -134,8 +128,8 @@ def calc_gamma(dat, pop_dat):
     return(out)
 
 
-def calc_nubin(rates, variances, m):
-    breakpoint()
+def calc_rubin(rates, variances, year):
+    m = len(rates)
     # mean est
     cbar = np.mean(rates)
     # var within
@@ -143,17 +137,17 @@ def calc_nubin(rates, variances, m):
     if (m == 1):
         df = 1.96
     else:
-        r = (1 + 1/m) * evar/vbar
-        df = (m - 1) * (1 + 1/r)**2
         # var between
         evar = np.sum((rates - cbar)**2) / (m - 1)
         variances = vbar + evar * (m + 1)/ m
+        r = (1 + 1/m) * evar/vbar
+        df = (m - 1) * (1 + 1/r)**2
     se = np.sqrt(variances)
     # Calc 95\% CI
     crit = scipy.stats.t.ppf(1 - 0.05/2, df)
     lci = cbar - (crit * se)
     uci = cbar + (crit * se)
-    res = np.c_[cbar, lci, uci]
+    res = [year, cbar, lci, uci]
     return(res)
 
 # calcRubin <- function(est, se, fun=exp) {
@@ -186,16 +180,6 @@ class CalcInc(DataProc):
         self.pdat_yr_age = pred_dat_age_year(self.edat)
         self.pop_n = get_pop_n(self.edat, self.args)
 
-    def gamma_mid(self, age_adjust = True):
-        """Gamma HIV incidence using mid-point imputation"""
-        imdat = imp_midpoint(self.pre_imp_dat) 
-        sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.bdat, self.args)
-        if (age_adjust == False):
-            self.pop_n["N"] = 1 
-        res = calc_gamma(mdat, self.pop_n, out, i = 1)
-        return(res[0, 0])
-
     def time_inc(self, i):
         """Add timer to the calculate inc rate function"""
         if (self.args.verbose):
@@ -216,10 +200,18 @@ class CalcInc(DataProc):
         pool = mp.Pool(self.args.mcores) 
         res = pool.map_async(self.time_inc,
                 [i for i in range(self.args.nsim)])
-        est = res.get()
+        est = np.vstack(res.get())
         pool.close(); pool.join()
+        # split by year
+        sp_est = [est[est[:, 0] == k] 
+                for k in np.unique(est[:, 0])]
+        # get rubin est
+        res = [calc_rubin(x[:, 1], x[:, 2], x[0, 0]) 
+                for x in sp_est]
+        pout = pd.DataFrame(res, 
+                columns = ["Year", "Rate", "LCI", "UCI"])
         print('\n')
-        return(est)
+        return(pout)
 
 
 
@@ -231,9 +223,10 @@ if __name__ == '__main__':
     from  ahri.args import SetArgs
     from ahri.calc import CalcInc
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 5, years = np.arange(2005, 2021),
-        age = {"Fem": [15, 24]})
+    dfem = SetArgs(root = data2020, nsim = 50, years = np.arange(2005, 2021),
+        age = {"Fem": [15, 49]})
     xx = CalcInc(dfem)
     # print(xx.gamma_mid())
     # print(xx.pois_mid())
     # tt = xx.gamma_rand()
+    print(xx.iter_inc())
