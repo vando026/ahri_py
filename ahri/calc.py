@@ -64,8 +64,6 @@ def split_data(predat, bdat, args):
             bins = args.agecat, include_lowest=True)
     return(mdat.drop(["Days", "DoB", "YoB"], axis = 1))
 
-def set_post_imp(im):
-    """Prepare dataset after imputation for models""" 
 
 def get_inc(rtdat, predat, events, ptimes):
     """Calculate inc rate by person years"""
@@ -153,7 +151,6 @@ def calc_pois(dat, ndat, formula = "Event ~ -1"):
 def age_adjust(count, pop, stpop, year, conf_level = 0.95):
     """Use gamma distribution and direct method for incidence rates"""
     rate = count / pop
-    cruderate = np.sum(count) / np.sum(pop)
     stdwt = stpop / np.sum(stpop)
     dsr = np.sum(stdwt * rate)
     dsr_var = sum((stdwt**2) * (count/pop**2))
@@ -185,6 +182,30 @@ def calc_gamma(split_dat, pop_dat):
             agg_dat.loc[agg_dat.Year == year, "N"], year))
     out = np.vstack(out)
     return(out)
+
+
+
+def calc_rubin(results, variances):
+    m = results.shape[0] 
+    vbar = variances[0]
+    cbar = results[0]
+    for i in range(1, m):
+        cbar = cbar + results[i]
+        vbar = vbar + variances[i]
+    cbar = cbar/m
+    vbar = vbar/m
+    evar = np.cov([results[:, 0], results[:, 1]])
+    r = (1 + 1/m) * evar/vbar
+    df = (m - 1) * (1 + 1/r)**2
+    df = np.diag(df)
+    variance = vbar + evar * (m + 1)/ m
+    se = np.sqrt(np.diag(variance))
+    # Calc 95\% CI
+    crit = scipy.stats.t.ppf(1 - 0.05/2, df)
+    lci = cbar - (crit * se)
+    uci = cbar + (crit * se)
+    res = np.c_[cbar, lci, uci]
+    return(res)
 
 
 
@@ -224,7 +245,6 @@ class CalcInc(DataProc):
         mdat = split_data(sdat, self.bdat, self.args)
         if (age_adjust == False):
             self.pop_n["N"] = 1 
-        breakpoint()
         res = calc_gamma(mdat, self.pop_n)
         res = pd.DataFrame(res, 
                 columns = ["Year", "Rate", "Var", "LCI", "UCI"])

@@ -43,30 +43,18 @@ class DataProc(SetArgs):
     def epi_dta(self, addvars = None):     
         print("Reading data, this may take time...")
         dat = pd.read_stata(self.args.epifile)
-        if ("CalendarYear" in dat.columns): 
-            dat = dat.rename(columns = {'CalendarYear': 'Year'})
-        if ("ARTStartedDate" in dat.columns):
-            dat = dat.rename(columns = {'ARTStartedDate': 'EarliestARTInitDate'})
         dat = dat.rename(columns = {
             'IndividualId':'IIntID', 'LocationId':'BSIntID', 
-            'Sex':'Female', 'Days':'ExpDays', 
-            'StartDate':'ObservationStart',
-            'EndDate':'ObservationEnd',
-            'ModerntAssetIdx':'AssetIndex'})
-        dcols = ['IIntID', 'BSIntID', 'Female', 'ExpDays',
-                'ObservationStart', 'ObservationEnd', 'Year',
-                'AssetIndex', 'Age', 'DoB', 'DoD', 
-                'InMigration', 'OutMigration', 'Resident', 
-                'OnART', 'EarliestARTInitDate']
+            'CalendarYear': 'Year', 'Sex':'Female', 'Days':'ExpDays', 
+            'StartDate':'ObservationStart', 'EndDate':'ObservationEnd'})
+        dcols = ['IIntID', 'BSIntID', 'Female', 'ObservationStart',
+                'ObservationEnd', 'Year', 'Age', 'DoB'] 
         if (addvars is not None):
             dcols = [dcols, addvars]
             dcols = [col for slist in dcols for col in slist]
         dat = dat[dcols]
         dat = dat[dat.Female.isin(['Female', 'Male'])]
         dat = dat.assign(Female = (dat.Female=='Female').astype(int))
-        # dat = dat.sort_values(['IIntID', 'ObservationStart'])
-        # if (drop_tasp): 
-          # dat = utils.drop_tasp(self.args.pip_pkl, dat) 
         dat.to_pickle(self.args.epi_pkl)
         print(f"File saved to {self.args.epi_pkl}\n")
         return(dat)

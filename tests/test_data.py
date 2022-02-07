@@ -6,15 +6,19 @@ from ahri.dataproc import DataProc
 from ahri.api import API
 import numpy as np
 
+# in ipython run
+# %run test_data.py "/home/alain/Seafile/AHRI_Data/2020"
+
 class TestAHRI(unittest.TestCase):
 
     root = '/home/alain/Seafile/AHRI_Data/2020'
     args = SetArgs(root = root,
         years = np.arange(2005, 2020))
-    testy = API(args)
-    hdat = testy.data_proc.get_hiv()
-    sdat = testy.data_proc.set_hiv()
-    rtdat = testy.data_proc.get_repeat_testers(sdat)
+    testy = DataProc(args)
+    hdat = testy.get_hiv()
+    sdat = testy.set_hiv()
+    rtdat = testy.get_repeat_testers(sdat)
+    edat = testy.get_epi()
 
     def test_hiv_nrows(self):
         nrows = self.hdat.shape[0]
@@ -50,6 +54,10 @@ class TestAHRI(unittest.TestCase):
 
     def test_rt_sero(self):
         nval = self.rtdat.sero_event.sum()
+        self.assertEqual(nval, 3176)
+
+    def test_epi_nrow(self):
+        nrow = self.edat.shape[0]
         self.assertEqual(nval, 3176)
 
 if __name__ == '__main__':
