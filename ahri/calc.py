@@ -78,52 +78,22 @@ def get_ptime_long(di):
 def split_data(predat, bdat, args):
     """Split repeat-tester data into episodes""" 
     edat = [get_ptime_long(predat[di]) for di in range(predat.shape[0])]
-    mdat = pd.DataFrame(np.vstack(edat), 
+    dat = pd.DataFrame(np.vstack(edat), 
             columns = ["IIntID", "Year", "Days", "Event"])
-    mdat["PYears"] = mdat["Days"] / 365
-    mdat = mdat[mdat['PYears'] != 0]
-    mdat["tscale"] = np.log(mdat["PYears"])
-    mdat = pd.merge(mdat, bdat, how = "inner", on = "IIntID")
-    mdat["Age"] = mdat["Year"] - mdat["YoB"]
-    mdat["AgeCat"] = pd.cut(mdat["Age"], 
+    dat["PYears"] = dat["Days"] / 365
+    dat = dat[dat['PYears'] != 0]
+    dat["tscale"] = np.log(dat["PYears"])
+    dat = pd.merge(dat, bdat, how = "inner", on = "IIntID")
+    dat["Age"] = dat["Year"] - dat["YoB"]
+    dat["AgeCat"] = pd.cut(dat["Age"], 
             bins = args.agecat, include_lowest=True)
-    return(mdat.drop(["Days", "DoB", "YoB"], axis = 1))
+    dat = dat.groupby(["Year", "AgeCat"]).agg(
+            Events = pd.NamedAgg("Event", sum),
+            PYears = pd.NamedAgg("PYears", sum)
+            ).reset_index()
+    return(dat)
 
 
-
-def get_inc(predat, bdat, pop_n, nsim = 2):
-        imdat = imp_random(self.pre_imp_dat) 
-        sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.bdat, self.args)
-        res = [calc_gamma(mdat, self.pop_n) 
-                for i in range(nsim)]
-        return(res)
-
-def time_inc(rtdat, predat, events, ptimes, i, args):
-    """Add timer to the calculate inc rate function"""
-    if (args.verbose):
-        j = (i + 1) / args.nsim
-        sys.stdout.write('\r')
-        sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-        sys.stdout.flush()
-        # sleep(0.0005)
-    # you have to reset random seed for each process
-    np.random.seed()
-    inc = get_inc(rtdat, predat, events, ptimes)
-    return(inc)
-
-
-def iter_inc(rtdat, predat, args):
-    ptimes = {x:0 for x in range(np.min(args.years), np.max(args.years) + 1)}
-    events = ptimes.copy()
-    pool = mp.Pool(args.mcores) 
-    out = [pool.apply_async(time_inc, 
-        args = (rtdat, predat, events, ptimes, i, args)) 
-            for i in range(args.nsim)]
-    inc = np.array([r.get() for r in out]).T
-    pool.close(); pool.join()
-    print('\n')
-    return(est)
 
 def calc_pois(dat, ndat, formula = "Event ~ -1"):
     """Calc incidence using Poisson model"""
@@ -133,7 +103,7 @@ def calc_pois(dat, ndat, formula = "Event ~ -1"):
     res = model.get_prediction(ndat)
     return(res.summary_frame())
 
-def age_adjust(count, pop, stpop, year):
+def age_adjust(count, pop, stpop):
     """Use gamma distribution and direct method for incidence rates"""
     if (all(x > 0 for x in pop) is not True):
         return([0, 0])
@@ -150,43 +120,35 @@ def age_adjust(count, pop, stpop, year):
     #         (dsr_var + wm**2), scale = (dsr_var + wm**2)/(dsr + wm))
     # res = {"rate": dsr, "crude": cruderate, "var": dsr_var, 
             # "lci": gamma_lci, "uci": gamma_uci }
-    res = [year, dsr, dsr_var]
+    res = [dsr, dsr_var]
     return(res)
 
-
-def calc_gamma(split_dat, pop_dat):
-    agg_dat = split_dat.groupby(["Year", "AgeCat"]).agg(
-            Events = pd.NamedAgg("Event", sum),
-            PYears = pd.NamedAgg("PYears", sum)
-            ).reset_index()
-    res = [age_adjust(
-            agg_dat.loc[agg_dat.Year == year, "Events"],
-            agg_dat.loc[agg_dat.Year == year, "PYears"],
-            pop_dat.loc[agg_dat.Year == year, "N"], year)
-        for year in np.unique(agg_dat.Year.values)]
-    res = np.vstack(res)
-    return(res)
+def calc_gamma(dat, pop_dat):
+    years = np.unique(dat.Year.values)
+    out = [age_adjust(
+        dat.loc[dat.Year == year, "Events"],
+        dat.loc[dat.Year == year, "PYears"],
+        pop_dat.loc[dat.Year == year, "N"])
+            for year in years]
+    out = np.c_[years, out]
+    return(out)
 
 
-def calc_rubin(rates, variances, m):
+def calc_nubin(rates, variances, m):
     breakpoint()
-    cbar = rates[0]
-    vbar = variances[0]
-    for i in range(1, m):
-        cbar = cbar + rates[i]
-        vbar = vbar + variances[i]
     # mean est
     cbar = np.mean(rates)
     # var within
     vbar = np.mean(variances)
-    # var between
-    # evar = np.cov([rates[:, 0], rates[:, 1]])
-    evar = np.sum((rates - cbar)**2) / (m - 1)
-    r = (1 + 1/m) * evar/vbar
-    df = (m - 1) * (1 + 1/r)**2
-    df = np.diag(df)
-    variance = vbar + evar * (m + 1)/ m
-    se = np.sqrt(variance)
+    if (m == 1):
+        df = 1.96
+    else:
+        r = (1 + 1/m) * evar/vbar
+        df = (m - 1) * (1 + 1/r)**2
+        # var between
+        evar = np.sum((rates - cbar)**2) / (m - 1)
+        variances = vbar + evar * (m + 1)/ m
+    se = np.sqrt(variances)
     # Calc 95\% CI
     crit = scipy.stats.t.ppf(1 - 0.05/2, df)
     lci = cbar - (crit * se)
@@ -219,26 +181,10 @@ class CalcInc(DataProc):
         self.edat = self.set_epi()
         self.bdat = get_birth_date(self.edat)
         self.rtdat = self.get_repeat_testers(self.hdat)
-        self.pre_imp_dat = prep_for_imp(self.rtdat)
+        self.pidat = prep_for_imp(self.rtdat)
         self.pdat_yr = pred_dat_year(self.args)
         self.pdat_yr_age = pred_dat_age_year(self.edat)
-        self.adjust_form = "Event ~ -1 + C(Year) + Age + C(Year):Age"
-        self.unadjust_form = "Event ~ -1 + C(Year)"
         self.pop_n = get_pop_n(self.edat, self.args)
-
-    def pois_mid(self, age_adjust = True):
-        """Poisson HIV incidence using mid-point imputation"""
-        imdat = imp_midpoint(self.pre_imp_dat) 
-        sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.bdat, self.args)
-        if (age_adjust):
-            ndat = self.pdat_yr_age 
-            f1 = self.adjust_form
-        else:
-            ndat = self.pdat_yr
-            f1 = self.unadjust_form
-        res = calc_pois(mdat, ndat, f1)
-        return(res)
 
     def gamma_mid(self, age_adjust = True):
         """Gamma HIV incidence using mid-point imputation"""
@@ -247,24 +193,36 @@ class CalcInc(DataProc):
         mdat = split_data(sdat, self.bdat, self.args)
         if (age_adjust == False):
             self.pop_n["N"] = 1 
-        res = calc_gamma(mdat, self.pop_n)
-        results = calc_rubin(res[:, 1], res[:, 2]) 
-        # res = pd.DataFrame(res, 
-                # columns = ["Year", "Rate", "Var", "LCI", "UCI"])
-        return(res)
+        res = calc_gamma(mdat, self.pop_n, out, i = 1)
+        return(res[0, 0])
 
-    def get_inc(self, age_adjust = True):
-        imdat = imp_random(self.pre_imp_dat) 
+    def time_inc(self, i):
+        """Add timer to the calculate inc rate function"""
+        if (self.args.verbose):
+            j = (i + 1) / self.args.nsim
+            sys.stdout.write('\r')
+            sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+            sys.stdout.flush()
+            # sleep(0.0005)
+        # you have to reset random seed for each process
+        np.random.seed()
+        imdat = imp_random(self.pidat) 
         sdat = prep_for_split(self.rtdat, imdat)
         mdat = split_data(sdat, self.bdat, self.args)
         res = calc_gamma(mdat, self.pop_n)
         return(res)
-    
-    def gamma_rand(self, age_addjust = True):
-        """Gamma HIV incidence using random-point imputation"""
-        res = [self.get_inc() for i in range(self.args.nsim)]
-        res = np.vstack(res)
-        return(res)
+
+    def iter_inc(self):
+        pool = mp.Pool(self.args.mcores) 
+        res = pool.map_async(self.time_inc,
+                [i for i in range(self.args.nsim)])
+        est = res.get()
+        pool.close(); pool.join()
+        print('\n')
+        return(est)
+
+
+
 
 
 
@@ -273,9 +231,9 @@ if __name__ == '__main__':
     from  ahri.args import SetArgs
     from ahri.calc import CalcInc
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 2, years = np.arange(2005, 2021),
+    dfem = SetArgs(root = data2020, nsim = 5, years = np.arange(2005, 2021),
         age = {"Fem": [15, 24]})
     xx = CalcInc(dfem)
-    print(xx.gamma_mid())
+    # print(xx.gamma_mid())
     # print(xx.pois_mid())
     # tt = xx.gamma_rand()
