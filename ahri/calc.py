@@ -98,14 +98,6 @@ def split_data(predat, bdat, args):
     return(dat)
 
 
-def calc_pois(dat, ndat, formula = "Event ~ -1"):
-    """Calc incidence using Poisson model"""
-    model = sm.GLM.from_formula(formula, 
-            offset = dat["tscale"], data = dat, 
-            family = sm.families.Poisson(sm.families.links.log())).fit()
-    res = model.get_prediction(ndat)
-    return(res.summary_frame())
-
 def age_adjust(count, pop, stpop):
     """Use gamma distribution and direct method for incidence rates"""
     if (all(x > 0 for x in pop) is not True):
@@ -149,24 +141,6 @@ def calc_rubin(rates, variances, year):
     uci = cbar + (crit * se)
     res = [year, cbar, lci, uci]
     return(res)
-
-# calcRubin <- function(est, se, fun=exp) {
-#   doCalc <- function(est, se, func=fun) {
-#     m <- length(est)
-#     mn <- mean(est)
-#     if (m > 1) {
-#       var_with <- mean(se^2)
-#       var_betw <- sum((est - mn)^2)/(m-1)
-#       se <- sqrt(var_with + var_betw*(1 + (1/m)))
-#       rdf <- (m - 1) * (1 + (var_with/((1+ (1/m)) * var_betw)))^2
-#       tdf <- qt(1 - (0.05/2), rdf)
-#     } else {
-#       tdf <- 1.96 
-#     }
-#     ci <- func(mn + c(-1, 1) * (tdf * se))
-#     c(rate=func(mn), lci=ci[1], uci=ci[2])
-#   }
-
 
 class CalcInc(DataProc):
     def __init__(self, args):
