@@ -35,6 +35,31 @@ def prep_for_split(rtdat, imdat):
 #             for y in range(syear + 1, eyear): 
 #                 ptimes[y] += 365
 
+
+def prep_for_imp(rtdat, origin = datetime(1970, 1, 1)):
+    """Prepare rtdat for imputation"""
+    ndat = rtdat[-pd.isna(rtdat['early_pos'])]
+    ndat = ndat[["IIntID", "late_neg", "early_pos"]]
+    ndat['late_neg_'] = (ndat['late_neg'] - origin).dt.days
+    ndat['early_pos_'] = (ndat['early_pos'] - origin).dt.days
+    ndat = ndat[["IIntID", "late_neg_", "early_pos_"]]
+    return(ndat.to_numpy())
+
+def imp_random(rtdat):
+    """Impute random dates in censored interval"""
+    idates = np.random.randint(rtdat[:, 1] + 1,  rtdat[:, 2])
+    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
+    ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
+    return(ndat)
+
+def imp_midpoint(rtdat):
+    """Impute mid-point dates in censored interval"""
+    mdates = np.floor((rtdat[:, 1] +  rtdat[:, 2]) / 2)
+    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": mdates})
+    ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
+    return(ndat)
+
+
 def get_ptime_long(di):
     """Get the person-time contributions"""
     yi = np.arange(di[3], di[4] + 1, dtype = int)
@@ -65,16 +90,14 @@ def split_data(predat, bdat, args):
     return(mdat.drop(["Days", "DoB", "YoB"], axis = 1))
 
 
-def get_inc(rtdat, predat, events, ptimes):
-    """Calculate inc rate by person years"""
-    imdat = imp_random(predat) 
-    sdat = set_inc_data(rtdat, imdat)
-    # use cython version for agg_inc
-    for i in range(sdat.shape[0]):
-        agg_incx(sdat[i], events, ptimes) 
-    inc = [(events[x] / (ptimes[x] / 365)) * 100 
-            for x in events.keys()]
-    return(inc)
+
+def get_inc(predat, bdat, pop_n, nsim = 2):
+        imdat = imp_random(self.pre_imp_dat) 
+        sdat = prep_for_split(self.rtdat, imdat)
+        mdat = split_data(sdat, self.bdat, self.args)
+        res = [calc_gamma(mdat, self.pop_n) 
+                for i in range(nsim)]
+        return(res)
 
 def time_inc(rtdat, predat, events, ptimes, i, args):
     """Add timer to the calculate inc rate function"""
@@ -102,18 +125,74 @@ def iter_inc(rtdat, predat, args):
     print('\n')
     return(est)
 
-def get_mean(est):
-    est = [np.mean(inc[i]) for i in range(inc.shape[0])]
-    # est = pd.DataFrame({'Year': list(events.keys()), 'Rate': est})
-    return(est)
+def calc_pois(dat, ndat, formula = "Event ~ -1"):
+    """Calc incidence using Poisson model"""
+    model = sm.GLM.from_formula(formula, 
+            offset = dat["tscale"], data = dat, 
+            family = sm.families.Poisson(sm.families.links.log())).fit()
+    res = model.get_prediction(ndat)
+    return(res.summary_frame())
+
+def age_adjust(count, pop, stpop, year):
+    """Use gamma distribution and direct method for incidence rates"""
+    if (all(x > 0 for x in pop) is not True):
+        return([0, 0])
+    rate = count / pop
+    stdwt = stpop / np.sum(stpop)
+    dsr = np.sum(stdwt * rate)
+    dsr_var = sum((stdwt**2) * (count/pop**2))
+    # wm = np.max(stdwt / pop)
+    # alpha = 1 - conf_level
+    # gamma_lci = scipy.stats.gamma.ppf(alpha/2,
+    #         a = (dsr**2)/dsr_var, scale = dsr_var/dsr)
+    # gamma_uci = scipy.stats.gamma.ppf(1 - alpha/2, 
+    #         a = ((dsr + wm)**2) / 
+    #         (dsr_var + wm**2), scale = (dsr_var + wm**2)/(dsr + wm))
+    # res = {"rate": dsr, "crude": cruderate, "var": dsr_var, 
+            # "lci": gamma_lci, "uci": gamma_uci }
+    res = [year, dsr, dsr_var]
+    return(res)
 
 
-def get_se(est, n):
-    se = [np.std(inc[i]) / np.sqrt(n)
-            for i in range(inc.shape[0])]
-    # est = pd.DataFrame({'Year': list(events.keys()), 'Rate': est})
-    return(se)
+def calc_gamma(split_dat, pop_dat):
+    agg_dat = split_dat.groupby(["Year", "AgeCat"]).agg(
+            Events = pd.NamedAgg("Event", sum),
+            PYears = pd.NamedAgg("PYears", sum)
+            ).reset_index()
+    res = [age_adjust(
+            agg_dat.loc[agg_dat.Year == year, "Events"],
+            agg_dat.loc[agg_dat.Year == year, "PYears"],
+            pop_dat.loc[agg_dat.Year == year, "N"], year)
+        for year in np.unique(agg_dat.Year.values)]
+    res = np.vstack(res)
+    return(res)
 
+
+def calc_rubin(rates, variances, m):
+    breakpoint()
+    cbar = rates[0]
+    vbar = variances[0]
+    for i in range(1, m):
+        cbar = cbar + rates[i]
+        vbar = vbar + variances[i]
+    # mean est
+    cbar = np.mean(rates)
+    # var within
+    vbar = np.mean(variances)
+    # var between
+    # evar = np.cov([rates[:, 0], rates[:, 1]])
+    evar = np.sum((rates - cbar)**2) / (m - 1)
+    r = (1 + 1/m) * evar/vbar
+    df = (m - 1) * (1 + 1/r)**2
+    df = np.diag(df)
+    variance = vbar + evar * (m + 1)/ m
+    se = np.sqrt(variance)
+    # Calc 95\% CI
+    crit = scipy.stats.t.ppf(1 - 0.05/2, df)
+    lci = cbar - (crit * se)
+    uci = cbar + (crit * se)
+    res = np.c_[cbar, lci, uci]
+    return(res)
 
 # calcRubin <- function(est, se, fun=exp) {
 #   doCalc <- function(est, se, func=fun) {
@@ -131,82 +210,6 @@ def get_se(est, n):
 #     ci <- func(mn + c(-1, 1) * (tdf * se))
 #     c(rate=func(mn), lci=ci[1], uci=ci[2])
 #   }
-#   est <- split(est, rownames(est))
-#   se <- split(se, rownames(se))
-#   out <- Map(doCalc, est, se)
-#   out <- data.frame(do.call(rbind, out))
-#   out[] <- lapply(out[], `*`, 100)
-#   out
-# }
-
-def calc_pois(dat, ndat, formula = "Event ~ -1"):
-    """Calc incidence using Poisson model"""
-    model = sm.GLM.from_formula(formula, 
-            offset = dat["tscale"], data = dat, 
-            family = sm.families.Poisson(sm.families.links.log())).fit()
-    res = model.get_prediction(ndat)
-    return(res.summary_frame())
-
-
-def age_adjust(count, pop, stpop, year, conf_level = 0.95):
-    """Use gamma distribution and direct method for incidence rates"""
-    rate = count / pop
-    stdwt = stpop / np.sum(stpop)
-    dsr = np.sum(stdwt * rate)
-    dsr_var = sum((stdwt**2) * (count/pop**2))
-    wm = np.max(stdwt / pop)
-    alpha = 1 - conf_level
-    gamma_lci = scipy.stats.gamma.ppf(alpha/2,
-            a = (dsr**2)/dsr_var, scale = dsr_var/dsr)
-    gamma_uci = scipy.stats.gamma.ppf(1 - alpha/2, 
-            a = ((dsr + wm)**2) / 
-            (dsr_var + wm**2), scale = (dsr_var + wm**2)/(dsr + wm))
-    # res = {"rate": dsr, "crude": cruderate, "var": dsr_var, 
-            # "lci": gamma_lci, "uci": gamma_uci }
-    res = [year, dsr, dsr_var, gamma_lci, gamma_uci]
-    return(res)
-
-
-def calc_gamma(split_dat, pop_dat):
-    agg_dat = split_dat.groupby(["Year", "AgeCat"]).agg(
-            Events = pd.NamedAgg("Event", sum),
-            PYears = pd.NamedAgg("PYears", sum)
-            ).reset_index()
-    agg_dat = pd.merge(agg_dat, pop_dat, how = "left",
-            on = ["Year", "AgeCat"])
-    out = []
-    for year in np.unique(agg_dat.Year.values):
-        out.append(age_adjust(
-            agg_dat.loc[agg_dat.Year == year, "Events"],
-            agg_dat.loc[agg_dat.Year == year, "PYears"],
-            agg_dat.loc[agg_dat.Year == year, "N"], year))
-    out = np.vstack(out)
-    return(out)
-
-
-
-def calc_rubin(results, variances):
-    m = results.shape[0] 
-    vbar = variances[0]
-    cbar = results[0]
-    for i in range(1, m):
-        cbar = cbar + results[i]
-        vbar = vbar + variances[i]
-    cbar = cbar/m
-    vbar = vbar/m
-    evar = np.cov([results[:, 0], results[:, 1]])
-    r = (1 + 1/m) * evar/vbar
-    df = (m - 1) * (1 + 1/r)**2
-    df = np.diag(df)
-    variance = vbar + evar * (m + 1)/ m
-    se = np.sqrt(np.diag(variance))
-    # Calc 95\% CI
-    crit = scipy.stats.t.ppf(1 - 0.05/2, df)
-    lci = cbar - (crit * se)
-    uci = cbar + (crit * se)
-    res = np.c_[cbar, lci, uci]
-    return(res)
-
 
 
 class CalcInc(DataProc):
@@ -216,6 +219,7 @@ class CalcInc(DataProc):
         self.edat = self.set_epi()
         self.bdat = get_birth_date(self.edat)
         self.rtdat = self.get_repeat_testers(self.hdat)
+        self.pre_imp_dat = prep_for_imp(self.rtdat)
         self.pdat_yr = pred_dat_year(self.args)
         self.pdat_yr_age = pred_dat_age_year(self.edat)
         self.adjust_form = "Event ~ -1 + C(Year) + Age + C(Year):Age"
@@ -224,8 +228,7 @@ class CalcInc(DataProc):
 
     def pois_mid(self, age_adjust = True):
         """Poisson HIV incidence using mid-point imputation"""
-        pdat = prep_for_imp(self.rtdat)
-        imdat = imp_midpoint(pdat) 
+        imdat = imp_midpoint(self.pre_imp_dat) 
         sdat = prep_for_split(self.rtdat, imdat)
         mdat = split_data(sdat, self.bdat, self.args)
         if (age_adjust):
@@ -239,13 +242,40 @@ class CalcInc(DataProc):
 
     def gamma_mid(self, age_adjust = True):
         """Gamma HIV incidence using mid-point imputation"""
-        pdat = prep_for_imp(self.rtdat)
-        imdat = imp_midpoint(pdat) 
+        imdat = imp_midpoint(self.pre_imp_dat) 
         sdat = prep_for_split(self.rtdat, imdat)
         mdat = split_data(sdat, self.bdat, self.args)
         if (age_adjust == False):
             self.pop_n["N"] = 1 
         res = calc_gamma(mdat, self.pop_n)
-        res = pd.DataFrame(res, 
-                columns = ["Year", "Rate", "Var", "LCI", "UCI"])
+        results = calc_rubin(res[:, 1], res[:, 2]) 
+        # res = pd.DataFrame(res, 
+                # columns = ["Year", "Rate", "Var", "LCI", "UCI"])
         return(res)
+
+    def get_inc(self, age_adjust = True):
+        imdat = imp_random(self.pre_imp_dat) 
+        sdat = prep_for_split(self.rtdat, imdat)
+        mdat = split_data(sdat, self.bdat, self.args)
+        res = calc_gamma(mdat, self.pop_n)
+        return(res)
+    
+    def gamma_rand(self, age_addjust = True):
+        """Gamma HIV incidence using random-point imputation"""
+        res = [self.get_inc() for i in range(self.args.nsim)]
+        res = np.vstack(res)
+        return(res)
+
+
+
+if __name__ == '__main__':
+    import ahri
+    from  ahri.args import SetArgs
+    from ahri.calc import CalcInc
+    data2020 = '/home/alain/Seafile/AHRI_Data/2020'
+    dfem = SetArgs(root = data2020, nsim = 2, years = np.arange(2005, 2021),
+        age = {"Fem": [15, 24]})
+    xx = CalcInc(dfem)
+    print(xx.gamma_mid())
+    # print(xx.pois_mid())
+    # tt = xx.gamma_rand()

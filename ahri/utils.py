@@ -17,22 +17,6 @@ def drop_tasp(dat, pipdat = None):
   dat = dat.drop(['PIPSA'], axis=1)
   return(dat)
 
-# def set_age(dat, args):
-#     """Function to set age by arguments"""
-#     for s in args.age.keys():
-#         dat = dat[~((dat.Female == args.sex[s]) & (dat.Age < args.age[s][0]))] 
-#         dat = dat[~((dat.Female == args.sex[s]) & (dat.Age > args.age[s][1]))]
-#     return(dat)
-
-def set_data(dat, args):
-    """Function to set age, sex, and year by arguments"""
-    for s in args.age.keys():
-        dat = dat[~((dat.Female == args.sex[s]) & (dat.Age < args.age[s][0]))] 
-        dat = dat[~((dat.Female == args.sex[s]) & (dat.Age > args.age[s][1]))]
-    dat = dat[dat.Female.isin(list(args.sex.values()))]
-    dat = dat[dat.Year.isin(args.years)]
-    return(dat)
-
 def get_dates(f):
   """ Function to get earliest/latest test dates. """
   def action(dat, var, name):
@@ -52,28 +36,6 @@ def get_birth_date(dat):
     dat['YoB'] = dat["DoB"].dt.year
     return(dat)
 
-def prep_for_imp(rtdat, origin = datetime(1970, 1, 1)):
-    """Prepare rtdat for imputation"""
-    ndat = rtdat[-pd.isna(rtdat['early_pos'])]
-    ndat = ndat[["IIntID", "late_neg", "early_pos"]]
-    ndat['late_neg_'] = (ndat['late_neg'] - origin).dt.days
-    ndat['early_pos_'] = (ndat['early_pos'] - origin).dt.days
-    ndat = ndat[["IIntID", "late_neg_", "early_pos_"]]
-    return(ndat.to_numpy())
-
-def imp_random(rtdat):
-    """Impute random dates in censored interval"""
-    idates = np.random.randint(rtdat[:, 1] + 1,  rtdat[:, 2])
-    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
-    ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
-    return(ndat)
-
-def imp_midpoint(rtdat):
-    """Impute mid-point dates in censored interval"""
-    mdates = np.floor((rtdat[:, 1] +  rtdat[:, 2]) / 2)
-    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": mdates})
-    ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
-    return(ndat)
 
 def pred_dat_year(args):
     """Make a year, tscale dataset for statsmodels predict"""
