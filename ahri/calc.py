@@ -19,55 +19,57 @@ def imp_random(rtdat):
     """Impute random dates in censored interval"""
     idates = np.random.randint(rtdat[:, 1] + 1,  rtdat[:, 2])
     ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
-    ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
     return(ndat)
 
 def imp_midpoint(rtdat):
     """Impute mid-point dates in censored interval"""
-    mdates = np.floor((rtdat[:, 1] +  rtdat[:, 2]) / 2)
-    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": mdates})
-    ndat['serodate'] = pd.to_datetime(ndat['serodate'], unit='d')
+    idates = np.floor((rtdat[:, 1] +  rtdat[:, 2]) / 2)
+    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
     return(ndat)
 
 
 def prep_for_split(rtdat, imdat):
     """Prepare a dataset for splitting into episodes"""
+    imdat['serodate'] = pd.to_datetime(imdat['serodate'], unit='d')
     dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
     dat['obs_end'] = np.where(dat["sero_event"]==1, 
             dat['serodate'], dat['late_neg'])
-    idat = np.array([dat.IIntID, 
+    idat = np.array([
+        dat["IIntID"], 
         dat["obs_start"].dt.day_of_year,
-        dat['obs_end'].dt.day_of_year,
+        dat["obs_end"].dt.day_of_year,
         dat["obs_start"].dt.year,
-        dat['obs_end'].dt.year,
-        dat["sero_event"]])
+        dat["obs_end"].dt.year,
+        dat["sero_event"],
+        dat["Age"]])
     return(idat.T)
 
 def split_long(di):
     """Get the person-time contributions"""
-    yi = np.arange(di[3], di[4] + 1, dtype = int)
-    ylen = len(yi)
+    ylen = (di[4] - di[3]) + 1
+    index = np.arange(ylen) 
+    yi = di[3] + index
+    ag = di[6] + index
+    id = np.repeat(di[0], ylen)
     ei = np.zeros(ylen, dtype = int)
     ei[ylen - 1] = di[5]
     if (ylen == 1):
-        ptime = di[2] - di[1]
+        ptime = np.array(di[2] - di[1])
     else:
         ptime = np.array([365 - di[1], di[2]], dtype = int)
         if (ylen > 2):
             ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
-    out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
-    return(out.T)
+    out = np.c_[id, yi, ptime, ei, ag]
+    return(out)
 
-def split_data(predat, bdat, args):
+def split_data(predat, args):
     """Split repeat-tester data into episodes""" 
-    edat = [split_long(predat[di]) for di in range(predat.shape[0])]
+    edat = split_datax(predat)
     dat = pd.DataFrame(np.vstack(edat), 
-            columns = ["IIntID", "Year", "Days", "Event"])
+            columns = ["IIntID", "Year", "Days", "Event", "Age"])
     dat["PYears"] = dat["Days"] / 365
     dat = dat[dat['PYears'] != 0]
     dat["tscale"] = np.log(dat["PYears"])
-    dat = pd.merge(dat, bdat, how = "inner", on = "IIntID")
-    dat["Age"] = dat["Year"] - dat["YoB"]
     dat["AgeCat"] = pd.cut(dat["Age"], 
             bins = args.agecat, include_lowest=True)
     dat = dat.groupby(["Year", "AgeCat"]).agg(
@@ -133,6 +135,17 @@ def est_combine(est):
     out["Year"] = out["Year"].astype(int)
     return(out)
 
+
+def timer(i, n):
+    """Add timer to the calculate inc rate function"""
+    j = (i + 1) / n
+    sys.stdout.write('\r')
+    sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+    sys.stdout.flush()
+    # sleep(0.0005)
+
+
+
 class CalcInc(DataProc):
     def __init__(self, args):
         DataProc.__init__(self, args)
@@ -140,6 +153,7 @@ class CalcInc(DataProc):
         self.edat = self.set_epi()
         self.bdat = get_birth_date(self.edat)
         self.rtdat = self.get_repeat_testers(self.hdat)
+        self.rtdat = add_year_test(self.rtdat, self.bdat)
         self.pidat = prep_for_imp(self.rtdat)
         self.pop_n = get_pop_n(self.edat, self.args)
 
@@ -147,7 +161,7 @@ class CalcInc(DataProc):
     def inc_midpoint(self, age_adjust = True):
         imdat = imp_midpoint(self.pidat) 
         sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.bdat, self.args)
+        mdat = split_data(sdat, self.args)
         if (age_adjust is not True):
             self.pop_n["N"] = 1
         res = calc_gamma(mdat, self.pop_n)
@@ -155,31 +169,30 @@ class CalcInc(DataProc):
         return(res)
 
 
-    def time_inc(self, i):
-        """Add timer to the calculate inc rate function"""
-        if (self.args.verbose):
-            j = (i + 1) / self.args.nsim
-            sys.stdout.write('\r')
-            sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-            sys.stdout.flush()
-            # sleep(0.0005)
+    def iter_inc(self, i, row):
         # you have to reset random seed for each process
+        timer(i, self.args.nsim)
         np.random.seed()
         imdat = imp_random(self.pidat) 
         sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.bdat, self.args)
+        mdat = split_data(sdat, self.args)
         res = calc_gamma(mdat, self.pop_n)
         return(res)
 
     def inc_randpoint(self, age_adjust = True):
         if (age_adjust is not True):
             self.pop_n["N"] = 1
+
+        def collect_result(result):
+            results.append(result)
+        results = []
+
         pool = mp.Pool(self.args.mcores) 
-        res = pool.map_async(self.time_inc,
-                [i for i in range(self.args.nsim)])
-        est = np.vstack(res.get())
+        for i in range(self.args.nsim):
+            pool.apply_async(self.iter_inc, args=(i, 4),
+                    callback=collect_result)
         pool.close(); pool.join()
-        # split by year
+        est = np.vstack(results)
         res = est_combine(est)
         print('\n')
         return(res)
@@ -190,18 +203,17 @@ if __name__ == '__main__':
     import ahri
     import numpy as np
     from  ahri.args import SetArgs
-    from ahri.calc import CalcInc
-    from ahri.pyx.ptime import split_longx
+    from ahri.pyx.ptime import split_datax
 
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 300, years = np.arange(2005, 2020),
+    dfem = SetArgs(root = data2020, nsim = 50, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
 
     xx = CalcInc(dfem)
-    print(xx.inc_midpoint(age_adjust  = False))
+    # print(xx.inc_midpoint(age_adjust  = False))
     print(xx.inc_randpoint(age_adjust = False))
     # t1 = time.time()
-    xx.inc_randpoint(age_adjust = True)
+    # xx.inc_randpoint(age_adjust = True)
     # t2 = time.time()
     # print(t2 - t1)
 
@@ -209,17 +221,16 @@ if __name__ == '__main__':
     # edat = xx.set_epi()
     # bdat = get_birth_date(edat)
     # rtdat = xx.get_repeat_testers(hdat)
+    # rtdat = add_year_test(rtdat, bdat)
     # pidat = prep_for_imp(rtdat)
     # pop_n = get_pop_n(edat, dfem)
     # imdat = imp_midpoint(pidat) 
     # sdat = prep_for_split(rtdat, imdat)
 
-    # s1 = np.array([17, 153, 254, 2005, 2014, 1])
-
+    # s1 = np.array([17, 153, 254, 2005, 2014, 1, 37])
+    # split_long(s1)
     # t1 = time.time()
-    # mdat = split_data(sdat, bdat, dfem)
-    # res = calc_gamma(mdat, pop_n)
-    # res = est_combine(res)
+    # mdat = split_data(sdat, dfem)
     # t2 = time.time()
     # print(t2 - t1)
 

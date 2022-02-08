@@ -26,24 +26,13 @@ def get_birth_date(dat):
     """Get birthdate and birthyear"""
     dat = dat[["IIntID", "DoB"]]
     dat = dat.drop_duplicates(["IIntID"])
-    dat['YoB'] = dat["DoB"].dt.year
     return(dat)
 
 
-def pred_dat_year(args):
-    """Make a year, tscale dataset for statsmodels predict"""
-    return(pd.DataFrame(
-        {"Year": np.arange(np.min(args.years), np.max(args.years)),
-        "tscale": 1}))
-
-def pred_dat_age_year(dat):
-    """Make dataset of average age by year for statsmodels predict"""
-    dat = dat.groupby(["Year"]). \
-        agg(Age = pd.NamedAgg("Age", "mean")) 
-    dat.reset_index(inplace = True)
-    dat["tscale"] = 1
+def add_year_test(dat, bdat, var = "obs_start"):
+    dat = pd.merge(dat, bdat, how = "inner", on = "IIntID")
+    dat["Age"] = dat[var].dt.year - dat["DoB"].dt.year
     return(dat)
-
 
 def get_pop_n(edat, args):
     """Get # of all participants by year and age group"""
