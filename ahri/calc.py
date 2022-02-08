@@ -120,7 +120,7 @@ def calc_gamma(dat, pop_dat):
     return(out)
 
 
-def calc_rubin(rates, variances, year):
+def calc_rubin(rates, variances, year = 0):
     m = len(rates)
     # mean est
     cbar = np.mean(rates)

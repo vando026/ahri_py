@@ -83,8 +83,8 @@ class DataProc(SetArgs):
                 ~((dat.Female == self.args.sex[s]) &
                     (dat.Age > self.args.age[s][1])) & 
                 dat.Year.isin(self.args.years)]
-        # if (self.args.drop_tasp): 
-          # dat = drop_tasp(dat, self.get_pip()) 
+        if (self.args.drop_tasp): 
+          dat = drop_tasp(dat, self.get_pip()) 
         return(dat)
 
     def set_hiv(self):
