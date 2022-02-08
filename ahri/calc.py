@@ -139,8 +139,20 @@ def calc_rubin(rates, variances, year = 0):
     crit = scipy.stats.t.ppf(1 - 0.05/2, df)
     lci = cbar - (crit * se)
     uci = cbar + (crit * se)
-    res = [year, cbar, lci, uci]
+    if (m ==1): 
+        lci = lci[0]; uci = uci[0]; se = se[0]
+    res = [year, cbar, se, lci, uci]
     return(res)
+
+def est_combine(est):
+    sp_est = [est[est[:, 0] == k] 
+            for k in np.unique(est[:, 0])]
+    res = [calc_rubin(x[:, 1], x[:, 2], x[0, 0]) 
+            for x in sp_est]
+    out = pd.DataFrame(res, 
+            columns = ["Year", "Rate",  "SE", "LCI", "UCI"])
+    out["Year"] = out["Year"].astype(int)
+    return(out)
 
 class CalcInc(DataProc):
     def __init__(self, args):
@@ -153,6 +165,18 @@ class CalcInc(DataProc):
         self.pdat_yr = pred_dat_year(self.args)
         self.pdat_yr_age = pred_dat_age_year(self.edat)
         self.pop_n = get_pop_n(self.edat, self.args)
+
+
+    def inc_midpoint(self, age_adjust = True):
+        imdat = imp_midpoint(self.pidat) 
+        sdat = prep_for_split(self.rtdat, imdat)
+        mdat = split_data(sdat, self.bdat, self.args)
+        if (age_adjust is not True):
+            self.pop_n["N"] = 1
+        res = calc_gamma(mdat, self.pop_n)
+        res = est_combine(res)
+        return(res)
+
 
     def time_inc(self, i):
         """Add timer to the calculate inc rate function"""
@@ -170,37 +194,32 @@ class CalcInc(DataProc):
         res = calc_gamma(mdat, self.pop_n)
         return(res)
 
-    def iter_inc(self):
+    def inc_randpoint(self, age_adjust = True):
+        if (age_adjust is not True):
+            self.pop_n["N"] = 1
         pool = mp.Pool(self.args.mcores) 
         res = pool.map_async(self.time_inc,
                 [i for i in range(self.args.nsim)])
         est = np.vstack(res.get())
         pool.close(); pool.join()
         # split by year
-        sp_est = [est[est[:, 0] == k] 
-                for k in np.unique(est[:, 0])]
-        # get rubin est
-        res = [calc_rubin(x[:, 1], x[:, 2], x[0, 0]) 
-                for x in sp_est]
-        pout = pd.DataFrame(res, 
-                columns = ["Year", "Rate", "LCI", "UCI"])
+        res = est_combine(est)
         print('\n')
-        return(pout)
-
-
-
-
+        return(res)
 
 
 if __name__ == '__main__':
+    import time
     import ahri
     from  ahri.args import SetArgs
     from ahri.calc import CalcInc
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 50, years = np.arange(2005, 2021),
+    dfem = SetArgs(root = data2020, nsim = 1, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
     xx = CalcInc(dfem)
-    # print(xx.gamma_mid())
-    # print(xx.pois_mid())
-    # tt = xx.gamma_rand()
-    print(xx.iter_inc())
+    # print(xx.inc_midpoint(age_adjust  = False))
+    # print(xx.inc_randpoint(age_adjust = False))
+    t1 = time.time()
+    xx.inc_randpoint(age_adjust = True)
+    t2 = time.time()
+    print(t2 - t1)
