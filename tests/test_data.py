@@ -19,6 +19,7 @@ class TestAHRI(unittest.TestCase):
     sdat = testy.set_hiv()
     rtdat = testy.get_repeat_testers(sdat)
     edat = testy.get_epi()
+    esdat = testy.set_epi()
 
     def test_hiv_nrows(self):
         nrows = self.hdat.shape[0]
@@ -43,22 +44,28 @@ class TestAHRI(unittest.TestCase):
     def test_hiv_year(self):
         year = np.mean(self.sdat.Year).round(3)
         self.assertEqual(year, 2011.937)
-
-    def test_hiv_year(self):
         year = np.mean(self.sdat.Year).round(3)
         self.assertEqual(year, 2011.937)
 
     def test_rt_nrow(self):
         nrow = self.rtdat.shape[0]
         self.assertEqual(nrow, 20994)
-
-    def test_rt_sero(self):
         nval = self.rtdat.sero_event.sum()
         self.assertEqual(nval, 3176)
 
     def test_epi_nrow(self):
         nrow = self.edat.shape[0]
-        self.assertEqual(nval, 3176)
+        self.assertEqual(nrow, 6399800)
+        nrow = self.edat.Female.value_counts()
+        self.assertEqual(nrow[0], 3000277)
+
+    def test_sepi_nrow(self):
+        nrow = self.esdat.shape[0]
+        self.assertEqual(nrow, 2716305)
+        nrow = self.esdat.Female.value_counts()
+        self.assertEqual(nrow[0], 1321503)
+        nsum = self.esdat.Age.sum()
+        self.assertEqual(nsum, 76810970)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

@@ -76,15 +76,15 @@ class DataProc(SetArgs):
 
     def set_data(self, dat):
         """Function to set age, sex, and year by arguments"""
-        dat = dat[dat.Year.isin(self.args.years)]
-        dat = dat[dat.Female.isin(list(self.args.sex.values()))]
-        if (self.args.drop_tasp): 
-          dat = drop_tasp(dat, self.get_pip()) 
         for s in self.args.age.keys():
-            dat = dat[~((dat.Female == self.args.sex[s]) &
-                    (dat.Age < self.args.age[s][0]))] 
-            dat = dat[~((dat.Female == self.args.sex[s]) &
-                    (dat.Age > self.args.age[s][1]))]
+            dat = dat[
+                ~((dat.Female == self.args.sex[s]) &
+                    (dat.Age < self.args.age[s][0])) &  
+                ~((dat.Female == self.args.sex[s]) &
+                    (dat.Age > self.args.age[s][1])) & 
+                dat.Year.isin(self.args.years)]
+        # if (self.args.drop_tasp): 
+          # dat = drop_tasp(dat, self.get_pip()) 
         return(dat)
 
     def set_hiv(self):
