@@ -1,5 +1,6 @@
 name: ahri_dev
 dependencies:
+  - Cython
   - python=3.8   
   - numpy
   - pandas=1.2.3

@@ -6,25 +6,6 @@ import multiprocessing as mp
 import scipy
 import sys
 
-# This algorithm is implemented as a cython function 
-# def agg_inc(di, events, ptimes):
-#     """Get the person-time contributions"""
-#     syear = di[3]
-#     eyear = di[4]
-#     sday = di[1]
-#     eday = di[2]
-#     sero = di[5]
-#     events[eyear] += sero
-#     if (eyear - syear == 0):
-#         ptimes[eyear] += eday - sday
-#     else:
-#         ptimes[syear] += 365 - sday
-#         ptimes[eyear] += eday
-#         if (eyear - syear > 2):
-#             for y in range(syear + 1, eyear): 
-#                 ptimes[y] += 365
-
-
 def prep_for_imp(rtdat, origin = datetime(1970, 1, 1)):
     """Prepare rtdat for imputation"""
     ndat = rtdat[-pd.isna(rtdat['early_pos'])]
@@ -49,7 +30,7 @@ def imp_midpoint(rtdat):
     return(ndat)
 
 
-def get_ptime_long(di):
+def split_long(di):
     """Get the person-time contributions"""
     yi = np.arange(di[3], di[4] + 1, dtype = int)
     ylen = len(yi)
@@ -81,7 +62,7 @@ def prep_for_split(rtdat, imdat):
 
 def split_data(predat, bdat, args):
     """Split repeat-tester data into episodes""" 
-    edat = [get_ptime_long(predat[di]) for di in range(predat.shape[0])]
+    edat = [split_long(predat[di]) for di in range(predat.shape[0])]
     dat = pd.DataFrame(np.vstack(edat), 
             columns = ["IIntID", "Year", "Days", "Event"])
     dat["PYears"] = dat["Days"] / 365
@@ -162,8 +143,6 @@ class CalcInc(DataProc):
         self.bdat = get_birth_date(self.edat)
         self.rtdat = self.get_repeat_testers(self.hdat)
         self.pidat = prep_for_imp(self.rtdat)
-        self.pdat_yr = pred_dat_year(self.args)
-        self.pdat_yr_age = pred_dat_age_year(self.edat)
         self.pop_n = get_pop_n(self.edat, self.args)
 
 
@@ -211,15 +190,41 @@ class CalcInc(DataProc):
 if __name__ == '__main__':
     import time
     import ahri
+    import numpy as np
     from  ahri.args import SetArgs
     from ahri.calc import CalcInc
+    from ahri.pyx.ptime import split_longx
+
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
     dfem = SetArgs(root = data2020, nsim = 1, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
     xx = CalcInc(dfem)
     # print(xx.inc_midpoint(age_adjust  = False))
     # print(xx.inc_randpoint(age_adjust = False))
+    # t1 = time.time()
+    # xx.inc_randpoint(age_adjust = True)
+    # t2 = time.time()
+    # print(t2 - t1)
+
+    hdat = xx.set_hiv()
+    edat = xx.set_epi()
+    bdat = get_birth_date(edat)
+    rtdat = xx.get_repeat_testers(hdat)
+    pidat = prep_for_imp(rtdat)
+    pop_n = get_pop_n(edat, dfem)
+    imdat = imp_midpoint(pidat) 
+    sdat = prep_for_split(rtdat, imdat)
+
     t1 = time.time()
-    xx.inc_randpoint(age_adjust = True)
+    # edat = [split_long(sdat[di]) for di in range(sdat.shape[0])]
+    s1 = split_long(sdat[0])
     t2 = time.time()
     print(t2 - t1)
+    print(s1)
+
+    t1 = time.time()
+    # edat = [split_long(sdat[di]) for di in range(sdat.shape[0])]
+    s1 = split_longx(sdat[0])
+    t2 = time.time()
+    print(t2 - t1)
+    print(s1)
