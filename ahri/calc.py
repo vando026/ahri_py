@@ -30,22 +30,6 @@ def imp_midpoint(rtdat):
     return(ndat)
 
 
-def split_long(di):
-    """Get the person-time contributions"""
-    yi = np.arange(di[3], di[4] + 1, dtype = int)
-    ylen = len(yi)
-    ei = np.zeros(ylen)
-    ei[ylen - 1] = di[5]
-    if (ylen == 1):
-        ptime = di[2] - di[1]
-    else:
-        ptime = np.array([365 - di[1], di[2]], dtype = int)
-        if (ylen > 2):
-            ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
-    out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
-    return(out.T)
-
-
 def prep_for_split(rtdat, imdat):
     """Prepare a dataset for splitting into episodes"""
     dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
@@ -59,6 +43,20 @@ def prep_for_split(rtdat, imdat):
         dat["sero_event"]])
     return(idat.T)
 
+def split_long(di):
+    """Get the person-time contributions"""
+    yi = np.arange(di[3], di[4] + 1, dtype = int)
+    ylen = len(yi)
+    ei = np.zeros(ylen, dtype = int)
+    ei[ylen - 1] = di[5]
+    if (ylen == 1):
+        ptime = di[2] - di[1]
+    else:
+        ptime = np.array([365 - di[1], di[2]], dtype = int)
+        if (ylen > 2):
+            ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
+    out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
+    return(out.T)
 
 def split_data(predat, bdat, args):
     """Split repeat-tester data into episodes""" 
@@ -196,35 +194,36 @@ if __name__ == '__main__':
     from ahri.pyx.ptime import split_longx
 
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 1, years = np.arange(2005, 2020),
+    dfem = SetArgs(root = data2020, nsim = 300, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
+
     xx = CalcInc(dfem)
-    # print(xx.inc_midpoint(age_adjust  = False))
-    # print(xx.inc_randpoint(age_adjust = False))
+    print(xx.inc_midpoint(age_adjust  = False))
+    print(xx.inc_randpoint(age_adjust = False))
     # t1 = time.time()
-    # xx.inc_randpoint(age_adjust = True)
+    xx.inc_randpoint(age_adjust = True)
     # t2 = time.time()
     # print(t2 - t1)
 
-    hdat = xx.set_hiv()
-    edat = xx.set_epi()
-    bdat = get_birth_date(edat)
-    rtdat = xx.get_repeat_testers(hdat)
-    pidat = prep_for_imp(rtdat)
-    pop_n = get_pop_n(edat, dfem)
-    imdat = imp_midpoint(pidat) 
-    sdat = prep_for_split(rtdat, imdat)
+    # hdat = xx.set_hiv()
+    # edat = xx.set_epi()
+    # bdat = get_birth_date(edat)
+    # rtdat = xx.get_repeat_testers(hdat)
+    # pidat = prep_for_imp(rtdat)
+    # pop_n = get_pop_n(edat, dfem)
+    # imdat = imp_midpoint(pidat) 
+    # sdat = prep_for_split(rtdat, imdat)
 
-    t1 = time.time()
-    # edat = [split_long(sdat[di]) for di in range(sdat.shape[0])]
-    s1 = split_long(sdat[0])
-    t2 = time.time()
-    print(t2 - t1)
-    print(s1)
+    # s1 = np.array([17, 153, 254, 2005, 2014, 1])
 
-    t1 = time.time()
-    # edat = [split_long(sdat[di]) for di in range(sdat.shape[0])]
-    s1 = split_longx(sdat[0])
-    t2 = time.time()
-    print(t2 - t1)
-    print(s1)
+    # t1 = time.time()
+    # mdat = split_data(sdat, bdat, dfem)
+    # res = calc_gamma(mdat, pop_n)
+    # res = est_combine(res)
+    # t2 = time.time()
+    # print(t2 - t1)
+
+#     t1 = time.time()
+#     xx.inc_randpoint()
+#     t2 = time.time()
+#     print(t2 - t1)

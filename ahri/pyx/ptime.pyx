@@ -7,32 +7,39 @@ def split_longx(di):
     cdef int eyear = di[4]
     cdef int sday = di[1]
     cdef int eday = di[2]
+    yi = np.arange(syear, eyear + 1, dtype = int)
     cdef int ylen = len(yi)
-    cdef int y0 = syear
-    cdef int yi[ylen]
-    
-    while y0 <= eyear:
-        for i in yi[:ylen]:
-            yi[i] = y0
-            y0 += 1
-
-    # print(yi)
-    # # yi = np.arange(syear, eyear + 1, dtype = int)
-    # # ptime = np.zeros(20, dtype = int)
-    # cdef int ptime[30]
-    # ir = np.repeat(id, ylen)
-    # ei = np.zeros(ylen)
-    # ei[ylen - 1] = di[5]
-    # if (ylen == 1):
-    #     ptime[0] = eday - sday
-    #     ptime = ptime[0:1]
-    # elif (ylen == 2):
-    #     ptime[0] = 365 - sday
-    #     ptime[1] = eday
-    #     ptime = ptime[0:2]
-    # else:
-    #     ptime[0] = 365 - sday
-    #     ptime[1:(ylen - 1)] = 365
-    #     ptime[ylen - 1] = eday
-    #     ptime = ptime[:ylen]
+    ptime = np.zeros(ylen, dtype = int)
+    ir = np.repeat(id, ylen)
+    ei = np.zeros(ylen, dtype = int)
+    ei[ylen - 1] = di[5]
+    if (ylen == 1):
+        ptime[0] = eday - sday
+    elif (ylen == 2):
+        ptime[0] = 365 - sday
+        ptime[1] = eday
+    else:
+        ptime[0] = 365 - sday
+        ptime[1:(ylen - 1)] = 365
+        ptime[ylen - 1] = eday
     return(np.c_[ir, yi, ptime, ei])
+
+# import numpy as np
+# def split_longx(di):
+#     cdef int ids = di[0]
+#     cdef int syear = di[3]
+#     cdef int eyear = di[4]
+#     cdef int sday = di[1]
+#     cdef int eday = di[2]
+#     yi = np.arange(syear, eyear + 1, dtype = int)
+#     cdef int ylen = len(yi)
+#     ei = np.zeros(ylen, dtype = int)
+#     ei[ylen - 1] = di[5]
+#     if (ylen == 1):
+#         ptime = di[2] - di[1]
+#     else:
+#         ptime = np.array([365 - di[1], di[2]], dtype = int)
+#         if (ylen > 2):
+#             ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
+#     out = np.array([np.repeat(di[0], ylen), yi, ptime, ei], dtype = int)
+#     return(out.T)
