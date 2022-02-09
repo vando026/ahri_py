@@ -1,7 +1,7 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
-from ahri.pyx.ptime import split_long
+from ahri.pyx.ptime import split_datax
 import statsmodels.api as sm
 import multiprocessing as mp
 import scipy
@@ -44,36 +44,9 @@ def prep_for_split(rtdat, imdat):
         dat["Age"]])
     return(idat.T)
 
-# def split_long(di):
-#     """Get the person-time contributions"""
-#     ylen = (di[3] - di[2]) + 1
-#     index = np.arange(ylen) 
-#     yi = di[2] + index
-#     ag = di[5] + index
-#     ei = np.zeros(ylen, dtype = int)
-#     ei[ylen - 1] = di[4]
-#     if (ylen == 1):
-#         ptime = np.array(di[1] - di[0])
-#     else:
-#         ptime = np.array([365 - di[0], di[1]], dtype = int)
-#         if (ylen > 2):
-#             ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
-#     out = np.c_[yi, ptime, ei, ag]
-#     return(out)
-
-# def split_long(di, tab):
-#     """Get the person-time contributions"""
-#     dt = tab[(tab[:, 0] >= di[2]) & (tab[:, 0] <= di[3])]
-#     age = np.arange(dt.shape[0]) + di[5]
-#     dt[-1, 2] = di[4]
-#     dt[-1, 1] = di[1]
-#     dt[0, 1] = dt[0, 1] - di[0]
-#     return(np.c_[dt, age])
-
 def split_data(predat, args):
     """Split repeat-tester data into episodes""" 
-    edat = [split_long(predat[di]) 
-            for di in range(predat.shape[0])]
+    edat = split_datax(predat)
     dat = pd.DataFrame(np.vstack(edat), 
             columns = ["Year", "Days", "Event", "Age"])
     dat["PYears"] = dat["Days"] / 365
@@ -195,21 +168,21 @@ if __name__ == '__main__':
     import ahri
     import numpy as np
     from  ahri.args import SetArgs
-    from ahri.pyx.ptime import split_long
+    from ahri.pyx.ptime import split_datax
     from ahri.calc import *
     from ahri.utils import get_birth_date, add_year_test
 
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
     dfem = SetArgs(root = data2020, nsim = 1, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
-
     xx = CalcInc(dfem)
+
     # print(xx.inc_midpoint(age_adjust  = False))
     # print(xx.inc_randpoint(age_adjust = False))
-    t1 = time.time()
-    print(xx.inc_randpoint(age_adjust = True))
-    t2 = time.time()
-    print(t2 - t1)
+    # t1 = time.time()
+    # print(xx.inc_randpoint(age_adjust = True))
+    # t2 = time.time()
+    # print(t2 - t1)
 
     hdat = xx.set_hiv()
     edat = xx.set_epi()
@@ -220,31 +193,43 @@ if __name__ == '__main__':
     pop_n = get_pop_n(edat, dfem)
     imdat = imp_midpoint(pidat) 
     sdat = prep_for_split(rtdat, imdat)
-
-
-    t1 = time.time()
-    edat = [split_long(sdat[di]) for di in range(sdat.shape[0])]
-    dat = pd.DataFrame(np.vstack(edat), 
-            columns = ["Year", "Days", "Event", "Age"])
-    dat["PYears"] = dat["Days"] / 365
-    dat["AgeCat"] = pd.cut(dat["Age"], 
-            bins = dfem.agecat, include_lowest=True)
-    dat = dat.groupby(["Year", "AgeCat"]).agg(
-            Events = pd.NamedAgg("Event", sum),
-            PYears = pd.NamedAgg("PYears", sum)
-            ).reset_index()
-    t2 = time.time()
-    print(t2 - t1)
-
-
-
-    # s1 = np.array([17, 153, 254, 2005, 2014, 1, 37])
-    t1 = time.time()
     mdat = split_data(sdat, dfem)
-    t2 = time.time()
-    print(t2 - t1)
 
-#     t1 = time.time()
-#     xx.inc_randpoint()
-#     t2 = time.time()
-#     print(t2 - t1)
+    from ahri.pyx.ptime import age_adjustx
+    stpop = pop_n.iloc[0:5, -1].to_numpy()
+    dt = mdat.iloc[0:5, [0, 2, 3]].to_numpy()
+    age_adjustx(dt[:, 1], dt[:, 2], stpop)
+
+
+
+# res = np.zeros(2, dtype = np.float64)
+# nrow = dt.shape[0]
+# ptot = 0
+
+# wt = np.zeros(nrow, dtype = np.float64)
+# rate = np.zeros(nrow, dtype = np.float64)
+# var = np.zeros(nrow, dtype = np.float64)
+
+# for i in range(nrow):
+#     ptot += stpop[i]
+
+# for i in range(nrow):
+#     wt[i] =  stpop[i] / ptot
+#     rate[i] = (dt[i, 1] / dt[i, 2]) * wt[i]
+#     var[i] = (dt[i, 1] / dt[i, 2]**2) * (wt[i]**2)
+#     res[0] += rate[i]
+#     res[1] += var[i]
+# res
+
+# count = dt[:, 1]
+# pop1 = dt[:, 2]
+# ratex = count / pop1
+# stdwt = stpop / np.sum(stpop)
+# dsr = np.sum(stdwt * ratex)
+# dsr_var = np.sum((stdwt**2) * (count/pop**2))
+# results = [dsr, dsr_var]
+
+age_adjust(dt[:, 1], dt[:, 2], stpop)
+age_adjustx(dt[:, 1], dt[:, 2], stpop)
+
+
