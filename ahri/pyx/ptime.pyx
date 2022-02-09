@@ -30,7 +30,7 @@ def split_long(long [:] di):
     return result
 
 
-def age_adjustx(double [:] count, double [:] pop, int [:] stpop):
+def age_adjustx(double [:] count, double [:] pop, long [:] stpop):
 
     DTYPE = np.float64
     cdef int i, ni = len(count)

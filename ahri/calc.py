@@ -1,7 +1,7 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
-from ahri.pyx.ptime import split_datax
+from ahri.pyx.ptime import split_datax, age_adjustx
 import statsmodels.api as sm
 import multiprocessing as mp
 import scipy
@@ -59,23 +59,25 @@ def split_data(predat, args):
     return(dat)
 
 
-def age_adjust(count, pop, stpop):
-    """Use gamma distribution and direct method for incidence rates"""
-    if (all(x > 0 for x in pop) is not True):
-        return([0, 0])
-    rate = count / pop
-    stdwt = stpop / np.sum(stpop)
-    dsr = np.sum(stdwt * rate)
-    dsr_var = sum((stdwt**2) * (count/pop**2))
-    res = [dsr, dsr_var]
-    return(res)
+# def age_adjust(count, pop, stpop):
+#     """Use gamma distribution and direct method for incidence rates"""
+#     if (all(x > 0 for x in pop) is not True):
+#         return([0, 0])
+#     rate = count / pop
+#     stdwt = stpop / np.sum(stpop)
+#     dsr = np.sum(stdwt * rate)
+#     dsr_var = sum((stdwt**2) * (count/pop**2))
+#     res = [dsr, dsr_var]
+#     return(res)
 
 def calc_gamma(dat, pop_dat):
     years = np.unique(dat.Year.values)
-    out = [age_adjust(
-        dat.loc[dat.Year == year, "Events"],
-        dat.loc[dat.Year == year, "PYears"],
-        pop_dat.loc[dat.Year == year, "N"])
+    dat = dat.iloc[:, [0, 2, 3]].to_numpy()
+    pop_dat = pop_n.iloc[:, [0, 2]].to_numpy()
+    out = [age_adjustx(
+        dat[dat[:, 0] == year, 1],
+        dat[dat[:, 0] == year, 2],
+        pop_dat[pop_dat[:, 0] == year, 1])
             for year in years]
     out = np.c_[years, out]
     return(out)
@@ -195,10 +197,11 @@ if __name__ == '__main__':
     sdat = prep_for_split(rtdat, imdat)
     mdat = split_data(sdat, dfem)
 
-    from ahri.pyx.ptime import age_adjustx
-    stpop = pop_n.iloc[0:5, -1].to_numpy()
-    dt = mdat.iloc[0:5, [0, 2, 3]].to_numpy()
-    age_adjustx(dt[:, 1], dt[:, 2], stpop)
+
+    # from ahri.pyx.ptime import age_adjustx
+    # stpop = pop_n.iloc[0:5, -1].to_numpy()
+    # dt = mdat.iloc[0:5, [0, 2, 3]].to_numpy()
+    # age_adjustx(dt[:, 1], dt[:, 2], stpop)
 
 
 
@@ -229,7 +232,7 @@ if __name__ == '__main__':
 # dsr_var = np.sum((stdwt**2) * (count/pop**2))
 # results = [dsr, dsr_var]
 
-age_adjust(dt[:, 1], dt[:, 2], stpop)
-age_adjustx(dt[:, 1], dt[:, 2], stpop)
+# age_adjust(dt[:, 1], dt[:, 2], stpop)
+# age_adjustx(dt[:, 1], dt[:, 2], stpop)
 
 
