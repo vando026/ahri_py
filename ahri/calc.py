@@ -1,7 +1,7 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
-# from ahri.pyx.ptime import split_datax
+from ahri.pyx.ptime import split_long
 import statsmodels.api as sm
 import multiprocessing as mp
 import scipy
@@ -36,7 +36,6 @@ def prep_for_split(rtdat, imdat):
     dat['obs_end'] = np.where(dat["sero_event"]==1, 
             dat['serodate'], dat['late_neg'])
     idat = np.array([
-        dat["IIntID"], 
         dat["obs_start"].dt.day_of_year,
         dat["obs_end"].dt.day_of_year,
         dat["obs_start"].dt.year,
@@ -45,38 +44,39 @@ def prep_for_split(rtdat, imdat):
         dat["Age"]])
     return(idat.T)
 
-def split_long(di):
-    """Get the person-time contributions"""
-    ylen = (di[4] - di[3]) + 1
-    index = np.arange(ylen) 
-    yi = di[3] + index
-    ag = di[6] + index
-    id = np.repeat(di[0], ylen)
-    ei = np.zeros(ylen, dtype = int)
-    ei[ylen - 1] = di[5]
-    if (ylen == 1):
-        ptime = np.array(di[2] - di[1])
-    else:
-        ptime = np.array([365 - di[1], di[2]], dtype = int)
-        if (ylen > 2):
-            ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
-    out = np.c_[id, yi, ptime, ei, ag]
-    return(out)
+# def split_long(di):
+#     """Get the person-time contributions"""
+#     ylen = (di[3] - di[2]) + 1
+#     index = np.arange(ylen) 
+#     yi = di[2] + index
+#     ag = di[5] + index
+#     ei = np.zeros(ylen, dtype = int)
+#     ei[ylen - 1] = di[4]
+#     if (ylen == 1):
+#         ptime = np.array(di[1] - di[0])
+#     else:
+#         ptime = np.array([365 - di[0], di[1]], dtype = int)
+#         if (ylen > 2):
+#             ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
+#     out = np.c_[yi, ptime, ei, ag]
+#     return(out)
 
-
-# do not use the cpython version yet
-def split_datax(predat):
-    edat = [split_long(predat[di]) for di in range(predat.shape[0])]
-    return(edat)
+# def split_long(di, tab):
+#     """Get the person-time contributions"""
+#     dt = tab[(tab[:, 0] >= di[2]) & (tab[:, 0] <= di[3])]
+#     age = np.arange(dt.shape[0]) + di[5]
+#     dt[-1, 2] = di[4]
+#     dt[-1, 1] = di[1]
+#     dt[0, 1] = dt[0, 1] - di[0]
+#     return(np.c_[dt, age])
 
 def split_data(predat, args):
     """Split repeat-tester data into episodes""" 
-    edat = split_datax(predat)
+    edat = [split_long(predat[di]) 
+            for di in range(predat.shape[0])]
     dat = pd.DataFrame(np.vstack(edat), 
-            columns = ["IIntID", "Year", "Days", "Event", "Age"])
+            columns = ["Year", "Days", "Event", "Age"])
     dat["PYears"] = dat["Days"] / 365
-    dat = dat[dat['PYears'] != 0]
-    dat["tscale"] = np.log(dat["PYears"])
     dat["AgeCat"] = pd.cut(dat["Age"], 
             bins = args.agecat, include_lowest=True)
     dat = dat.groupby(["Year", "AgeCat"]).agg(
@@ -195,7 +195,7 @@ if __name__ == '__main__':
     import ahri
     import numpy as np
     from  ahri.args import SetArgs
-    from ahri.pyx.ptime import split_datax
+    from ahri.pyx.ptime import split_long
     from ahri.calc import *
     from ahri.utils import get_birth_date, add_year_test
 
@@ -211,7 +211,6 @@ if __name__ == '__main__':
     t2 = time.time()
     print(t2 - t1)
 
-    gdat = xx.get_hiv()
     hdat = xx.set_hiv()
     edat = xx.set_epi()
     bdat = get_birth_date(edat)
@@ -222,12 +221,28 @@ if __name__ == '__main__':
     imdat = imp_midpoint(pidat) 
     sdat = prep_for_split(rtdat, imdat)
 
-    s1 = np.array([17, 153, 254, 2005, 2014, 1, 37])
-    split_long(s1)
-    # t1 = time.time()
-    # mdat = split_data(sdat, dfem)
-    # t2 = time.time()
-    # print(t2 - t1)
+
+    t1 = time.time()
+    edat = [split_long(sdat[di]) for di in range(sdat.shape[0])]
+    dat = pd.DataFrame(np.vstack(edat), 
+            columns = ["Year", "Days", "Event", "Age"])
+    dat["PYears"] = dat["Days"] / 365
+    dat["AgeCat"] = pd.cut(dat["Age"], 
+            bins = dfem.agecat, include_lowest=True)
+    dat = dat.groupby(["Year", "AgeCat"]).agg(
+            Events = pd.NamedAgg("Event", sum),
+            PYears = pd.NamedAgg("PYears", sum)
+            ).reset_index()
+    t2 = time.time()
+    print(t2 - t1)
+
+
+
+    # s1 = np.array([17, 153, 254, 2005, 2014, 1, 37])
+    t1 = time.time()
+    mdat = split_data(sdat, dfem)
+    t2 = time.time()
+    print(t2 - t1)
 
 #     t1 = time.time()
 #     xx.inc_randpoint()

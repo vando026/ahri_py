@@ -50,5 +50,9 @@ def timer(i, n):
     sys.stdout.flush()
     # sleep(0.0005)
 
-
-
+def mk_epi_tab():
+    yrs = np.arange(2004, 2025)
+    days = np.repeat(365, len(yrs))
+    zeros = np.zeros(len(yrs), dtype = int)
+    tab = np.c_[yrs, days, zeros]
+    return(tab)
