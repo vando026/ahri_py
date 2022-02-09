@@ -30,7 +30,7 @@ def get_birth_date(dat):
 
 
 def add_year_test(dat, bdat, var = "obs_start"):
-    dat = pd.merge(dat, bdat, how = "inner", on = "IIntID")
+    dat = pd.merge(dat, bdat, how = "left", on = "IIntID")
     dat["Age"] = dat[var].dt.year - dat["DoB"].dt.year
     return(dat)
 

@@ -73,7 +73,7 @@ def split_data(predat, args):
 def calc_gamma(dat, pop_dat):
     years = np.unique(dat.Year.values)
     dat = dat.iloc[:, [0, 2, 3]].to_numpy()
-    pop_dat = pop_n.iloc[:, [0, 2]].to_numpy()
+    pop_dat = pop_dat.iloc[:, [0, 2]].to_numpy()
     out = [age_adjustx(
         dat[dat[:, 0] == year, 1],
         dat[dat[:, 0] == year, 2],
@@ -175,16 +175,16 @@ if __name__ == '__main__':
     from ahri.utils import get_birth_date, add_year_test
 
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 1, years = np.arange(2005, 2020),
+    dfem = SetArgs(root = data2020, nsim = 50, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
     xx = CalcInc(dfem)
 
     # print(xx.inc_midpoint(age_adjust  = False))
     # print(xx.inc_randpoint(age_adjust = False))
-    # t1 = time.time()
-    # print(xx.inc_randpoint(age_adjust = True))
-    # t2 = time.time()
-    # print(t2 - t1)
+    t1 = time.time()
+    print(xx.inc_randpoint(age_adjust = True))
+    t2 = time.time()
+    print(t2 - t1)
 
     hdat = xx.set_hiv()
     edat = xx.set_epi()
@@ -196,6 +196,26 @@ if __name__ == '__main__':
     imdat = imp_midpoint(pidat) 
     sdat = prep_for_split(rtdat, imdat)
     mdat = split_data(sdat, dfem)
+    # %timeit -n10 res = calc_gamma(mdat, pop_n)
+    
+
+    def prep_for_imp(dat, origin = datetime(2000, 1, 1)):
+        """Prepare rtdat for imputation"""
+        dat['obs_start'] = (dat['obs_start'] - origin).dt.days
+        dat['late_neg_'] = (dat['late_neg'] - origin).dt.days
+        dat['early_pos_'] = (dat['early_pos'] - origin).dt.days
+        # dat = dat[["IIntID", "late_neg_", "early_pos_"]]
+        return(dat[[""]])
+        # return(dat.to_numpy())
+    prep_for_imp(rtdat)
+
+    pidat = prep_for_imp(rtdat)
+    idates = np.floor((pidat[:, 1] +  pidat[:, 2]) / 2)
+
+
+    imdat = pd.DataFrame({"IIntID": pidat[:, 0], "serodate": idates})
+    imdat['serodate'] = pd.to_datetime(imdat['serodate'], unit='d', origin =
+            datetime(2000, 1, 1))
 
 
     # from ahri.pyx.ptime import age_adjustx
@@ -203,36 +223,5 @@ if __name__ == '__main__':
     # dt = mdat.iloc[0:5, [0, 2, 3]].to_numpy()
     # age_adjustx(dt[:, 1], dt[:, 2], stpop)
 
-
-
-# res = np.zeros(2, dtype = np.float64)
-# nrow = dt.shape[0]
-# ptot = 0
-
-# wt = np.zeros(nrow, dtype = np.float64)
-# rate = np.zeros(nrow, dtype = np.float64)
-# var = np.zeros(nrow, dtype = np.float64)
-
-# for i in range(nrow):
-#     ptot += stpop[i]
-
-# for i in range(nrow):
-#     wt[i] =  stpop[i] / ptot
-#     rate[i] = (dt[i, 1] / dt[i, 2]) * wt[i]
-#     var[i] = (dt[i, 1] / dt[i, 2]**2) * (wt[i]**2)
-#     res[0] += rate[i]
-#     res[1] += var[i]
-# res
-
-# count = dt[:, 1]
-# pop1 = dt[:, 2]
-# ratex = count / pop1
-# stdwt = stpop / np.sum(stpop)
-# dsr = np.sum(stdwt * ratex)
-# dsr_var = np.sum((stdwt**2) * (count/pop**2))
-# results = [dsr, dsr_var]
-
-# age_adjust(dt[:, 1], dt[:, 2], stpop)
-# age_adjustx(dt[:, 1], dt[:, 2], stpop)
 
 
