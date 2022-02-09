@@ -16,6 +16,10 @@ class TestAHRI(unittest.TestCase):
     pop = np.array([230061, 329449, 114920, 39487, 14208, 3052])
     stpop =  np.array([63986.6, 186263.6, 157302.2, 97647.0, 47572.6, 12262.6])
 
+
+    s1 = np.array()
+
+
     def test_adjust(self):
         res = age_adjust(self.count, self.pop, self.stpop)
         self.assertEqual(np.round(res[0], 8), 0.00092305)

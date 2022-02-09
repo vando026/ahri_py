@@ -169,9 +169,9 @@ class CalcInc(DataProc):
         return(res)
 
 
-    def iter_inc(self, i, row):
-        # you have to reset random seed for each process
+    def iter_inc(self, i):
         timer(i, self.args.nsim)
+        # reset random seed for each process
         np.random.seed()
         imdat = imp_random(self.pidat) 
         sdat = prep_for_split(self.rtdat, imdat)
@@ -184,14 +184,19 @@ class CalcInc(DataProc):
             self.pop_n["N"] = 1
 
         def collect_result(result):
+            global results
             results.append(result)
         results = []
 
         pool = mp.Pool(self.args.mcores) 
-        for i in range(self.args.nsim):
-            pool.apply_async(self.iter_inc, args=(i, 4),
-                    callback=collect_result)
+        # for i in range(self.args.nsim):
+            # pool.apply_async(self.iter_inc, args=(i, 1),
+                    # callback=collect_result)
+        results = [pool.apply_async(self.iter_inc)
+            i for i in range(self.args.nsim)]
         pool.close(); pool.join()
+        breakpoint()
+
         est = np.vstack(results)
         res = est_combine(est)
         print('\n')
@@ -204,9 +209,10 @@ if __name__ == '__main__':
     import numpy as np
     from  ahri.args import SetArgs
     from ahri.pyx.ptime import split_datax
+    from ahri.calc import CalcInc
 
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 50, years = np.arange(2005, 2020),
+    dfem = SetArgs(root = data2020, nsim = 5, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
 
     xx = CalcInc(dfem)
