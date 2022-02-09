@@ -1,7 +1,7 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
-from ahri.pyx.ptime import split_datax
+# from ahri.pyx.ptime import split_datax
 import statsmodels.api as sm
 import multiprocessing as mp
 import scipy
@@ -62,6 +62,12 @@ def split_long(di):
             ptime = np.insert(ptime, 1, np.repeat(365, ylen - 2))
     out = np.c_[id, yi, ptime, ei, ag]
     return(out)
+
+
+# do not use the cpython version yet
+def split_datax(predat):
+    edat = [split_long(predat[di]) for di in range(predat.shape[0])]
+    return(edat)
 
 def split_data(predat, args):
     """Split repeat-tester data into episodes""" 
@@ -137,16 +143,6 @@ def est_combine(est):
     return(out)
 
 
-def timer(i, n):
-    """Add timer to the calculate inc rate function"""
-    j = (i + 1) / n
-    sys.stdout.write('\r')
-    sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-    sys.stdout.flush()
-    # sleep(0.0005)
-
-
-
 class CalcInc(DataProc):
     def __init__(self, args):
         DataProc.__init__(self, args)
@@ -170,7 +166,7 @@ class CalcInc(DataProc):
         return(res)
 
 
-    def iter_inc(self, i, row):
+    def do_rand_imp(self, i):
         # you have to reset random seed for each process
         timer(i, self.args.nsim)
         np.random.seed()
@@ -183,18 +179,13 @@ class CalcInc(DataProc):
     def inc_randpoint(self, age_adjust = True):
         if (age_adjust is not True):
             self.pop_n["N"] = 1
-
-        def collect_result(result):
-            results.append(result)
-        results = []
-
+        # use parallel processing
         pool = mp.Pool(self.args.mcores) 
-        for i in range(self.args.nsim):
-            pool.apply_async(self.iter_inc, args=(i, 4),
-                    callback=collect_result)
+        res = pool.map_async(self.do_rand_imp,
+                [i for i in range(self.args.nsim)])
+        results = np.vstack(res.get())
         pool.close(); pool.join()
-        est = np.vstack(results)
-        res = est_combine(est)
+        res = est_combine(results)
         print('\n')
         return(res)
 
@@ -209,30 +200,30 @@ if __name__ == '__main__':
     from ahri.utils import get_birth_date, add_year_test
 
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 8, years = np.arange(2005, 2020),
+    dfem = SetArgs(root = data2020, nsim = 1, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
 
     xx = CalcInc(dfem)
-    print(xx.inc_midpoint(age_adjust  = False))
+    # print(xx.inc_midpoint(age_adjust  = False))
     # print(xx.inc_randpoint(age_adjust = False))
-    # t1 = time.time()
-    xx.inc_randpoint(age_adjust = True)
-    # t2 = time.time()
-    # print(t2 - t1)
+    t1 = time.time()
+    print(xx.inc_randpoint(age_adjust = True))
+    t2 = time.time()
+    print(t2 - t1)
 
-    # gdat = xx.get_hiv()
-    # hdat = xx.set_hiv()
-    # edat = xx.set_epi()
-    # bdat = get_birth_date(edat)
-    # rtdat = xx.get_repeat_testers(hdat)
-    # rtdat = add_year_test(rtdat, bdat)
-    # pidat = prep_for_imp(rtdat)
-    # pop_n = get_pop_n(edat, dfem)
-    # imdat = imp_midpoint(pidat) 
-    # sdat = prep_for_split(rtdat, imdat)
+    gdat = xx.get_hiv()
+    hdat = xx.set_hiv()
+    edat = xx.set_epi()
+    bdat = get_birth_date(edat)
+    rtdat = xx.get_repeat_testers(hdat)
+    rtdat = add_year_test(rtdat, bdat)
+    pidat = prep_for_imp(rtdat)
+    pop_n = get_pop_n(edat, dfem)
+    imdat = imp_midpoint(pidat) 
+    sdat = prep_for_split(rtdat, imdat)
 
-    # s1 = np.array([17, 153, 254, 2005, 2014, 1, 37])
-    # split_long(s1)
+    s1 = np.array([17, 153, 254, 2005, 2014, 1, 37])
+    split_long(s1)
     # t1 = time.time()
     # mdat = split_data(sdat, dfem)
     # t2 = time.time()

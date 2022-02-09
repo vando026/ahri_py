@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-# from ahri.cyfiles import agg_incx
+import sys
 
 def drop_tasp(dat, pipdat = None):
   """Function to drop individuals who tested in TasP areas"""
@@ -41,4 +41,14 @@ def get_pop_n(edat, args):
     gdat = edat.groupby(["Year", "AgeCat"]).agg(
             N = pd.NamedAgg("IIntID", len)).reset_index()
     return(gdat)
+
+def timer(i, n):
+    """A progress bar for multiple imputation"""
+    j = (i + 1) / n
+    sys.stdout.write('\r')
+    sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+    sys.stdout.flush()
+    # sleep(0.0005)
+
+
 

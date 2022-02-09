@@ -1,7 +1,7 @@
 import unittest
 import sys
 from ahri import utils
-from ahri.calc import calc_rubin, age_adjust
+from ahri.calc import calc_rubin, age_adjust, split_long
 import numpy as np
 
 # in ipython run, cd to file and 
@@ -17,8 +17,9 @@ class TestAHRI(unittest.TestCase):
     stpop =  np.array([63986.6, 186263.6, 157302.2, 97647.0, 47572.6, 12262.6])
 
 
-    s1 = np.array()
-
+    s1 = np.array([17, 153, 254, 2005, 2014, 1, 37])
+    s2 = np.array([17, 153, 254, 2005, 2005, 0, 20])
+    s3 = np.array([17, 153, 254, 2005, 2006, 1, 20])
 
     def test_adjust(self):
         res = age_adjust(self.count, self.pop, self.stpop)
@@ -31,6 +32,36 @@ class TestAHRI(unittest.TestCase):
         self.assertEqual(np.round(res[2], 6),  0.069728)
         self.assertEqual(np.round(res[3], 6), -1.248716)
         self.assertEqual(np.round(res[4], 6), -0.975127)
+
+    def test_split(self):
+        res = split_long(self.s1)
+        self.assertEqual(res.shape[0], 10)
+        self.assertEqual(res.shape[1], 5)
+        self.assertEqual(res[:, 2].sum(), 3386)
+        self.assertEqual(res[-1, 3], 1)
+        self.assertEqual(res[:, 4].sum(), 415)
+        self.assertEqual(res[0, 2], 365 - self.s1[1])
+
+    def test_split2(self):
+        res = split_long(self.s2)
+        self.assertEqual(res.shape[0], 1)
+        self.assertEqual(res.shape[1], 5)
+        self.assertEqual(res[:, 2].sum(), 101)
+        self.assertEqual(res[-1, 3], 0)
+        self.assertEqual(res[:, 4].sum(), 20)
+        self.assertEqual(res[0, 2], self.s2[2] - self.s2[1])
+
+
+    def test_split3(self):
+        res = split_long(self.s3)
+        self.assertEqual(res.shape[0], 2)
+        self.assertEqual(res.shape[1], 5)
+        self.assertEqual(res[:, 2].sum(), 466)
+        self.assertEqual(res[-1, 3], 1)
+        self.assertEqual(res[:, 4].sum(), 41)
+        self.assertEqual(res[0, 2], 365 - self.s2[1])
+        self.assertEqual(res[1, 2], self.s2[2])
+
 
 
 if __name__ == '__main__':
