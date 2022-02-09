@@ -1,6 +1,7 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
+from ahri.pyx.ptime import split_datax
 import statsmodels.api as sm
 import multiprocessing as mp
 import scipy
@@ -169,9 +170,9 @@ class CalcInc(DataProc):
         return(res)
 
 
-    def iter_inc(self, i):
+    def iter_inc(self, i, row):
+        # you have to reset random seed for each process
         timer(i, self.args.nsim)
-        # reset random seed for each process
         np.random.seed()
         imdat = imp_random(self.pidat) 
         sdat = prep_for_split(self.rtdat, imdat)
@@ -184,19 +185,14 @@ class CalcInc(DataProc):
             self.pop_n["N"] = 1
 
         def collect_result(result):
-            global results
             results.append(result)
         results = []
 
         pool = mp.Pool(self.args.mcores) 
-        # for i in range(self.args.nsim):
-            # pool.apply_async(self.iter_inc, args=(i, 1),
-                    # callback=collect_result)
-        results = [pool.apply_async(self.iter_inc)
-            i for i in range(self.args.nsim)]
+        for i in range(self.args.nsim):
+            pool.apply_async(self.iter_inc, args=(i, 4),
+                    callback=collect_result)
         pool.close(); pool.join()
-        breakpoint()
-
         est = np.vstack(results)
         res = est_combine(est)
         print('\n')
@@ -209,23 +205,24 @@ if __name__ == '__main__':
     import numpy as np
     from  ahri.args import SetArgs
     from ahri.pyx.ptime import split_datax
-    from ahri.calc import CalcInc
+    from ahri.calc import *
+    from ahri.utils import get_birth_date, add_year_test
 
     data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 5, years = np.arange(2005, 2020),
+    dfem = SetArgs(root = data2020, nsim = 8, years = np.arange(2005, 2020),
         age = {"Fem": [15, 49]})
 
     xx = CalcInc(dfem)
-    # print(xx.inc_midpoint(age_adjust  = False))
+    print(xx.inc_midpoint(age_adjust  = False))
     # print(xx.inc_randpoint(age_adjust = False))
-    t1 = time.time()
+    # t1 = time.time()
     xx.inc_randpoint(age_adjust = True)
-    t2 = time.time()
-    print(t2 - t1)
+    # t2 = time.time()
+    # print(t2 - t1)
 
-    gdat = xx.get_hiv()
-    hdat = xx.set_hiv()
-    edat = xx.set_epi()
+    # gdat = xx.get_hiv()
+    # hdat = xx.set_hiv()
+    # edat = xx.set_epi()
     # bdat = get_birth_date(edat)
     # rtdat = xx.get_repeat_testers(hdat)
     # rtdat = add_year_test(rtdat, bdat)
