@@ -76,6 +76,7 @@ class DataProc(SetArgs):
 
     def set_data(self, dat):
         """Function to set age, sex, and year by arguments"""
+        dat = dat[dat.Female.isin(list(self.args.sex.values()))]
         for s in self.args.age.keys():
             dat = dat[
                 ~((dat.Female == self.args.sex[s]) &

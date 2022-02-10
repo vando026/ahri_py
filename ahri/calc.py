@@ -201,27 +201,39 @@ if __name__ == '__main__':
 
     def prep_for_imp(dat, origin = datetime(2000, 1, 1)):
         """Prepare rtdat for imputation"""
-        dat['obs_start'] = (dat['obs_start'] - origin).dt.days
+        # get number of days since 2000-1-1
+        dat['obs_start_'] = (dat['obs_start'] - origin).dt.days
         dat['late_neg_'] = (dat['late_neg'] - origin).dt.days
         dat['early_pos_'] = (dat['early_pos'] - origin).dt.days
-        # dat = dat[["IIntID", "late_neg_", "early_pos_"]]
-        return(dat[[""]])
+        dat = dat[["obs_start_", "late_neg_", 
+            "early_pos_", "sero_event", "Age"]].to_numpy()
+        # split data by seroevent
+        dat0 = dat[np.isnan(dat[:, 2])]
+        dat0 = dat0[:, [0, 1, 3, 4]]
+        dat1 = dat[~np.isnan(dat[:, 2]), :]
+        return([dat0, dat1])
+
+    def imp_midpoint(dat0, dat1):
+        dat1[:, 1] = np.floor((dat1[:, 1] +  dat1[:, 2]) / 2)
+        dat1 = dat1[:, [0, 1, 3, 4]]
+        ndat = np.vstack([dat0, dat1])
+        syear =  2000 + (ndat[:, 0] / 365.25)
+        sday = np.round(syear % 1 * 365.25)
+        eyear =  2000 + (ndat[:, 1] / 365.25)
+        eday = np.round(eyear % 1 * 365.25)
+        out = np.c_[np.floor(syear), sday, 
+                np.floor(eyear), eday, ndat[:, 2], ndat[:, 3]] 
+        return(np.array(out, dtype = int))
+
         # return(dat.to_numpy())
-    prep_for_imp(rtdat)
-
-    pidat = prep_for_imp(rtdat)
-    idates = np.floor((pidat[:, 1] +  pidat[:, 2]) / 2)
-
-
-    imdat = pd.DataFrame({"IIntID": pidat[:, 0], "serodate": idates})
-    imdat['serodate'] = pd.to_datetime(imdat['serodate'], unit='d', origin =
-            datetime(2000, 1, 1))
+    sdat = prep_for_imp(rtdat)
+    imp_midpoint(sdat[0], sdat[1])
 
 
     # from ahri.pyx.ptime import age_adjustx
     # stpop = pop_n.iloc[0:5, -1].to_numpy()
     # dt = mdat.iloc[0:5, [0, 2, 3]].to_numpy()
     # age_adjustx(dt[:, 1], dt[:, 2], stpop)
-
+j
 
 
