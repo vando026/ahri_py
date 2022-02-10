@@ -1,52 +1,46 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
-from ahri.pyx.ptime import split_datax, age_adjustx
+from ahri.cyth import split_datax, age_adjustx, pre_splitx
 import statsmodels.api as sm
 import multiprocessing as mp
 import scipy
 import sys
 
-def prep_for_imp(rtdat, origin = datetime(1970, 1, 1)):
-    """Prepare rtdat for imputation"""
-    ndat = rtdat[-pd.isna(rtdat['early_pos'])]
-    ndat = ndat[["IIntID", "late_neg", "early_pos"]]
-    ndat['late_neg_'] = (ndat['late_neg'] - origin).dt.days
-    ndat['early_pos_'] = (ndat['early_pos'] - origin).dt.days
-    ndat = ndat[["IIntID", "late_neg_", "early_pos_"]]
-    return(ndat.to_numpy())
+def prep_for_imp(dat, origin = datetime(2000, 1, 1)):
+    """Prepare repeat-tester data for imputation"""
+    # get testdate in days since 2000-1-1
+    dat['obs_start_'] = (dat['obs_start'] - origin).dt.days
+    dat['late_neg_'] = (dat['late_neg'] - origin).dt.days
+    dat['early_pos_'] = (dat['early_pos'] - origin).dt.days
+    dat = dat[["IIntID", "obs_start_", "late_neg_", 
+        "early_pos_", "sero_event", "Age"]]
+    dat = dat.to_numpy()
+    # split data by seroevent
+    dat0 = dat[ np.isnan(dat[:, 3]), :]
+    dat1 = dat[~np.isnan(dat[:, 3]), :]
+    return([dat0, dat1])
 
-def imp_random(rtdat):
+def imp_random(dat1):
     """Impute random dates in censored interval"""
-    idates = np.random.randint(rtdat[:, 1] + 1,  rtdat[:, 2])
-    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
-    return(ndat)
+    idates = np.random.randint(dat1[:, 2] + 1,  dat1[:, 3])
+    return(np.c_[dat1, idates])
 
-def imp_midpoint(rtdat):
+def imp_midpoint(dat1):
     """Impute mid-point dates in censored interval"""
-    idates = np.floor((rtdat[:, 1] +  rtdat[:, 2]) / 2)
-    ndat = pd.DataFrame({"IIntID": rtdat[:, 0], "serodate": idates})
-    return(ndat)
+    idates = np.floor((dat1[:, 2] +  dat1[:, 3]) / 2)
+    return(np.c_[dat1, idates])
 
-
-def prep_for_split(rtdat, imdat):
-    """Prepare a dataset for splitting into episodes"""
-    imdat['serodate'] = pd.to_datetime(imdat['serodate'], unit='d')
-    dat = pd.merge(rtdat, imdat, how = 'left', on = 'IIntID')
-    dat['obs_end'] = np.where(dat["sero_event"]==1, 
-            dat['serodate'], dat['late_neg'])
-    idat = np.array([
-        dat["obs_start"].dt.day_of_year,
-        dat["obs_end"].dt.day_of_year,
-        dat["obs_start"].dt.year,
-        dat["obs_end"].dt.year,
-        dat["sero_event"],
-        dat["Age"]])
-    return(idat.T)
-
-def split_data(predat, args):
+def split_data(dat, args):
     """Split repeat-tester data into episodes""" 
-    edat = split_datax(predat)
+    ndat0 = dat[0][:, [0, 1, 2,  4, 5]]
+    # replace early_pos with imp date at 6
+    ndat1 = dat[1][:, [0, 1, 6,  4, 5]]
+    ndat = np.concatenate([ndat0, ndat1],
+            dtype = np.intc, casting = 'unsafe')
+    pdat = pre_splitx(ndat) 
+    edat = split_datax(pdat)
+    # aggregate the data by agecat and year
     dat = pd.DataFrame(np.vstack(edat), 
             columns = ["Year", "Days", "Event", "Age"])
     dat["PYears"] = dat["Days"] / 365
@@ -58,17 +52,6 @@ def split_data(predat, args):
             ).reset_index()
     return(dat)
 
-
-# def age_adjust(count, pop, stpop):
-#     """Use gamma distribution and direct method for incidence rates"""
-#     if (all(x > 0 for x in pop) is not True):
-#         return([0, 0])
-#     rate = count / pop
-#     stdwt = stpop / np.sum(stpop)
-#     dsr = np.sum(stdwt * rate)
-#     dsr_var = sum((stdwt**2) * (count/pop**2))
-#     res = [dsr, dsr_var]
-#     return(res)
 
 def calc_gamma(dat, pop_dat):
     years = np.unique(dat.Year.values)
@@ -126,29 +109,27 @@ class CalcInc(DataProc):
         self.bdat = get_birth_date(self.edat)
         self.rtdat = self.get_repeat_testers(self.hdat)
         self.rtdat = add_year_test(self.rtdat, self.bdat)
-        self.pidat = prep_for_imp(self.rtdat)
+        self.idat = prep_for_imp(self.rtdat)
         self.pop_n = get_pop_n(self.edat, self.args)
 
 
     def inc_midpoint(self, age_adjust = True):
-        imdat = imp_midpoint(self.pidat) 
-        sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.args)
+        self.idat[1] = imp_midpoint(self.idat[1]) 
+        sdat = split_data(self.idat, self.args)
         if (age_adjust is not True):
             self.pop_n["N"] = 1
-        res = calc_gamma(mdat, self.pop_n)
+        res = calc_gamma(sdat, self.pop_n)
         res = est_combine(res)
         return(res)
 
-
     def do_rand_imp(self, i):
         # you have to reset random seed for each process
-        timer(i, self.args.nsim)
+        if self.args.verbose:
+            timer(i, self.args.nsim)
         np.random.seed()
-        imdat = imp_random(self.pidat) 
-        sdat = prep_for_split(self.rtdat, imdat)
-        mdat = split_data(sdat, self.args)
-        res = calc_gamma(mdat, self.pop_n)
+        self.idat[1] = imp_random(self.idat[1]) 
+        sdat = split_data(self.idat, self.args)
+        res = calc_gamma(sdat, self.pop_n)
         return(res)
 
     def inc_randpoint(self, age_adjust = True):
@@ -161,79 +142,6 @@ class CalcInc(DataProc):
         results = np.vstack(res.get())
         pool.close(); pool.join()
         res = est_combine(results)
-        print('\n')
         return(res)
-
-
-if __name__ == '__main__':
-    import time
-    import ahri
-    import numpy as np
-    from  ahri.args import SetArgs
-    from ahri.pyx.ptime import split_datax
-    from ahri.calc import *
-    from ahri.utils import get_birth_date, add_year_test
-
-    data2020 = '/home/alain/Seafile/AHRI_Data/2020'
-    dfem = SetArgs(root = data2020, nsim = 50, years = np.arange(2005, 2020),
-        age = {"Fem": [15, 49]})
-    xx = CalcInc(dfem)
-
-    # print(xx.inc_midpoint(age_adjust  = False))
-    # print(xx.inc_randpoint(age_adjust = False))
-    t1 = time.time()
-    print(xx.inc_randpoint(age_adjust = True))
-    t2 = time.time()
-    print(t2 - t1)
-
-    hdat = xx.set_hiv()
-    edat = xx.set_epi()
-    bdat = get_birth_date(edat)
-    rtdat = xx.get_repeat_testers(hdat)
-    rtdat = add_year_test(rtdat, bdat)
-    pidat = prep_for_imp(rtdat)
-    pop_n = get_pop_n(edat, dfem)
-    imdat = imp_midpoint(pidat) 
-    sdat = prep_for_split(rtdat, imdat)
-    mdat = split_data(sdat, dfem)
-    # %timeit -n10 res = calc_gamma(mdat, pop_n)
-    
-
-    def prep_for_imp(dat, origin = datetime(2000, 1, 1)):
-        """Prepare rtdat for imputation"""
-        # get number of days since 2000-1-1
-        dat['obs_start_'] = (dat['obs_start'] - origin).dt.days
-        dat['late_neg_'] = (dat['late_neg'] - origin).dt.days
-        dat['early_pos_'] = (dat['early_pos'] - origin).dt.days
-        dat = dat[["obs_start_", "late_neg_", 
-            "early_pos_", "sero_event", "Age"]].to_numpy()
-        # split data by seroevent
-        dat0 = dat[np.isnan(dat[:, 2])]
-        dat0 = dat0[:, [0, 1, 3, 4]]
-        dat1 = dat[~np.isnan(dat[:, 2]), :]
-        return([dat0, dat1])
-
-    def imp_midpoint(dat0, dat1):
-        dat1[:, 1] = np.floor((dat1[:, 1] +  dat1[:, 2]) / 2)
-        dat1 = dat1[:, [0, 1, 3, 4]]
-        ndat = np.vstack([dat0, dat1])
-        syear =  2000 + (ndat[:, 0] / 365.25)
-        sday = np.round(syear % 1 * 365.25)
-        eyear =  2000 + (ndat[:, 1] / 365.25)
-        eday = np.round(eyear % 1 * 365.25)
-        out = np.c_[np.floor(syear), sday, 
-                np.floor(eyear), eday, ndat[:, 2], ndat[:, 3]] 
-        return(np.array(out, dtype = int))
-
-        # return(dat.to_numpy())
-    sdat = prep_for_imp(rtdat)
-    imp_midpoint(sdat[0], sdat[1])
-
-
-    # from ahri.pyx.ptime import age_adjustx
-    # stpop = pop_n.iloc[0:5, -1].to_numpy()
-    # dt = mdat.iloc[0:5, [0, 2, 3]].to_numpy()
-    # age_adjustx(dt[:, 1], dt[:, 2], stpop)
-j
 
 

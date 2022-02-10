@@ -28,7 +28,6 @@ def get_birth_date(dat):
     dat = dat.drop_duplicates(["IIntID"])
     return(dat)
 
-
 def add_year_test(dat, bdat, var = "obs_start"):
     dat = pd.merge(dat, bdat, how = "left", on = "IIntID")
     dat["Age"] = dat[var].dt.year - dat["DoB"].dt.year
@@ -43,12 +42,12 @@ def get_pop_n(edat, args):
     return(gdat)
 
 def timer(i, n):
-    """A progress bar for multiple imputation"""
-    j = (i + 1) / n
-    sys.stdout.write('\r')
-    sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
-    sys.stdout.flush()
-    # sleep(0.0005)
+    """A progress bar"""
+    if i % 2 == 0: 
+        j = (i + 1) / n
+        sys.stdout.write('\r')
+        sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+        sys.stdout.flush()
 
 def mk_epi_tab():
     yrs = np.arange(2004, 2025)

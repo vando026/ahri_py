@@ -1,11 +1,34 @@
 import numpy as  np
 
-def split_datax(long [:,:] predat):
+def pre_splitx(int [:,:] ndat):
+    cdef int i, origin = 2000
+    cdef double syear, sday, eyear, eday
+    cdef double DAY = 365.25
+    cdef Py_ssize_t nrows = ndat.shape[0]
+    result = np.zeros((nrows, 6), dtype = np.intc)
+    cdef int[:, :] res = result
+    
+    for i in range(nrows):
+        syear =  origin + (ndat[i, 1] / DAY)
+        sday =  syear % 1 * DAY
+        eyear =  origin + (ndat[i, 2] / DAY)
+        eday = eyear % 1 * DAY
+        res[i, 0] = np.ceil(sday)
+        res[i, 1] = np.ceil(eday)
+        res[i, 2] = np.floor(syear)
+        res[i, 3] = np.floor(eyear)
+        res[i, 4] = ndat[i, 3]
+        res[i, 5] = ndat[i, 4]
+
+    return result
+
+
+def split_datax(int [:,:] predat):
     cdef Py_ssize_t nrow = predat.shape[0]
     edat = [split_long(predat[di]) for di in range(nrow)]
     return(edat)
 
-def split_long(long [:] di):
+def split_long(int [:] di):
 
     DTYPE = np.intc
     cdef int nrow = (di[3] - di[2]) + 1
