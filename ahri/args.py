@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import multiprocessing as mp
-# from ahri.calc import imp_midpoint, imp_random
 
 class SetFiles:
 

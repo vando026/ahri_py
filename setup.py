@@ -21,7 +21,8 @@ setup(
         "Operating System :: OS Independent",
     ],
     package_dir={"": "ahri"},
-    packages=find_packages(where="ahri"),
+    packages=find_packages(),
     python_requires=">=3.8",
+    install_requires = ['numpy', 'pandas', 'scipy'],
     ext_modules = [Extension("ahri.cyth", ["ahri/cyth.c"])],
 )

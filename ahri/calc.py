@@ -2,7 +2,6 @@ from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
 from ahri.cyth import split_datax, age_adjustx, pre_splitx
-import statsmodels.api as sm
 import multiprocessing as mp
 import scipy
 import sys
