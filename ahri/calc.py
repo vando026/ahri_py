@@ -1,7 +1,7 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
 from ahri.utils import *
-from ahri.cyth import split_datax, age_adjustx, pre_splitx
+from ahri.cypy import split_datax, age_adjustx, pre_splitx
 import multiprocessing as mp
 import scipy
 import sys
