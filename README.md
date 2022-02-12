@@ -25,7 +25,7 @@ follows:
 -   Functions to make the HIV incidence datasets, impute the
     seroconversion dates, perform multiple imputation, and calculate
     the annual HIV incidence rates.
-    <https://github.com/vando026/ahri/wiki_py/3-HIV-incidence>.
+    <https://github.com/vando026/ahri_py/wiki/3-HIV-incidence>.
 
 
 |                                                                                                                                                                                                                                                                        |
