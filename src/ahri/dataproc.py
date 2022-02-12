@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from ahri.args import SetArgs
-from ahri.utils import *
+from ahri import utils
 from functools import reduce
 
 class DataProc(SetArgs):
@@ -85,7 +85,7 @@ class DataProc(SetArgs):
                     (dat.Age > self.args.age[s][1])) & 
                 dat.Year.isin(self.args.years)]
         if (self.args.drop_tasp): 
-          dat = drop_tasp(dat, self.get_pip()) 
+          dat = utils.drop_tasp(dat, self.get_pip()) 
         return(dat)
 
     def set_hiv(self):
@@ -102,10 +102,10 @@ class DataProc(SetArgs):
     def get_repeat_testers(self, dat = None):
         if (dat is None): dat = self.set_hiv()
         """Get repeat tester data from an HIV test dataset"""
-        obs_start = get_dates_min(dat, "HIVNegative", "obs_start")
-        early_pos = get_dates_min(dat, "HIVPositive", "early_pos")
-        late_neg = get_dates_max(dat, "HIVNegative", "late_neg")
-        late_pos = get_dates_max(dat, "HIVPositive", "late_pos")
+        obs_start = utils.get_dates_min(dat, "HIVNegative", "obs_start")
+        early_pos = utils.get_dates_min(dat, "HIVPositive", "early_pos")
+        late_neg = utils.get_dates_max(dat, "HIVNegative", "late_neg")
+        late_pos = utils.get_dates_max(dat, "HIVPositive", "late_pos")
         dat = dat[['IIntID', 'Female']].drop_duplicates()
         dfs = [dat, obs_start, late_neg, early_pos, late_pos]
         dt = reduce(lambda left,right: \

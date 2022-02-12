@@ -1,10 +1,11 @@
 from datetime import datetime
 from ahri.dataproc import DataProc
-from ahri.utils import *
-from ahri.cypy import split_datax, age_adjustx, pre_splitx
+from ahri import utils
+from ahri import cypy
 import multiprocessing as mp
-import scipy
-import sys
+from scipy.stats import t
+import numpy as np
+import pandas as pd
 
 def prep_for_imp(dat, origin = datetime(2000, 1, 1)):
     """Prepare repeat-tester data for imputation"""
@@ -30,15 +31,15 @@ def imp_midpoint(dat1):
     idates = np.floor((dat1[:, 2] +  dat1[:, 3]) / 2)
     return(np.c_[dat1, idates])
 
-def split_data(dat, args):
+def agg_data(dat, args):
     """Split repeat-tester data into episodes""" 
     ndat0 = dat[0][:, [0, 1, 2,  4, 5]]
     # replace early_pos with imp date at 6
     ndat1 = dat[1][:, [0, 1, 6,  4, 5]]
     ndat = np.concatenate([ndat0, ndat1],
             dtype = np.intc, casting = 'unsafe')
-    pdat = pre_splitx(ndat) 
-    edat = split_datax(pdat)
+    pdat = cypy.pre_split(ndat) 
+    edat = cypy.split_data(pdat)
     # aggregate the data by agecat and year
     dat = pd.DataFrame(np.vstack(edat), 
             columns = ["Year", "Days", "Event", "Age"])
@@ -54,9 +55,9 @@ def split_data(dat, args):
 
 def calc_gamma(dat, pop_dat):
     years = np.unique(dat.Year.values)
-    dat = dat.iloc[:, [0, 2, 3]].to_numpy()
-    pop_dat = pop_dat.iloc[:, [0, 2]].to_numpy()
-    out = [age_adjustx(
+    dat = dat.iloc[:, [0, 2, 3]].to_numpy(dtype = np.intc)
+    pop_dat = pop_dat.iloc[:, [0, 2]].to_numpy(dtype = np.float64)
+    out = [cypy.age_adjust(
         dat[dat[:, 0] == year, 1],
         dat[dat[:, 0] == year, 2],
         pop_dat[pop_dat[:, 0] == year, 1])
@@ -81,7 +82,7 @@ def calc_rubin(rates, variances, year = 0):
         df = (m - 1) * (1 + 1/r)**2
     se = np.sqrt(variances)
     # Calc 95\% CI
-    crit = scipy.stats.t.ppf(1 - 0.05/2, df)
+    crit = t.ppf(1 - 0.05/2, df)
     lci = cbar - (crit * se)
     uci = cbar + (crit * se)
     if (m ==1): 
@@ -105,16 +106,16 @@ class CalcInc(DataProc):
         DataProc.__init__(self, args)
         self.hdat = self.set_hiv()
         self.edat = self.set_epi()
-        self.bdat = get_birth_date(self.edat)
+        self.bdat = utils.get_birth_date(self.edat)
         self.rtdat = self.get_repeat_testers(self.hdat)
-        self.rtdat = add_year_test(self.rtdat, self.bdat)
+        self.rtdat = utils.add_year_test(self.rtdat, self.bdat)
         self.idat = prep_for_imp(self.rtdat)
-        self.pop_n = get_pop_n(self.edat, self.args)
+        self.pop_n = utils.get_pop_n(self.edat, self.args)
 
 
     def inc_midpoint(self, age_adjust = True):
         self.idat[1] = imp_midpoint(self.idat[1]) 
-        sdat = split_data(self.idat, self.args)
+        sdat = agg_data(self.idat, self.args)
         if (age_adjust is not True):
             self.pop_n["N"] = 1
         res = calc_gamma(sdat, self.pop_n)
@@ -124,10 +125,10 @@ class CalcInc(DataProc):
     def do_rand_imp(self, i):
         # you have to reset random seed for each process
         if self.args.verbose:
-            timer(i, self.args.nsim)
+            utils.timer(i, self.args.nsim)
         np.random.seed()
         self.idat[1] = imp_random(self.idat[1]) 
-        sdat = split_data(self.idat, self.args)
+        sdat = agg_data(self.idat, self.args)
         res = calc_gamma(sdat, self.pop_n)
         return(res)
 
