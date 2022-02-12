@@ -72,14 +72,14 @@ def calc_rubin(rates, variances, year = 0):
     cbar = np.mean(rates)
     # var within
     vbar = np.mean(variances)
-    if (m == 1):
-        df = 1.96
-    else:
+    df = 1.96
+    if (m > 1):
         # var between
         evar = np.sum((rates - cbar)**2) / (m - 1)
         variances = vbar + evar * (m + 1)/ m
         r = (1 + 1/m) * evar/vbar
-        df = (m - 1) * (1 + 1/r)**2
+        if (r > 0):
+            df = (m - 1) * (1 + 1/r)**2
     se = np.sqrt(variances)
     # Calc 95\% CI
     crit = t.ppf(1 - 0.05/2, df)
