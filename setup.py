@@ -26,3 +26,12 @@ setup(
     install_requires = ['numpy', 'pandas', 'scipy'],
     ext_modules = [Extension("ahri.cypy", ["src/ahri/cypy.c"])],
 )
+
+
+
+# notes
+# if changes are made to the cypy.pyx file, then from the root run:
+    # $ cythonize -a src/ahri/cypy.pyx
+# to build the package from root do:
+    # $ python3 -m build
+    # $ pip3 install -e .

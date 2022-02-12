@@ -10,8 +10,6 @@ library](https://github.com/vando026/ahri), but work is focused on
 speeding up the HIV incidence rate calculations.
 
 The wiki help pages serve as a short introduction to the ahri library.
-These can be found in the links below. The help files are organised as
-follows:
 
 -   Getting started, which describes how to install the ahri library,
     which AHRI datasets to request and where to put them. It also shows
