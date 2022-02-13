@@ -44,8 +44,7 @@ def agg_data(dat, args):
     dat = pd.DataFrame(np.vstack(edat), 
             columns = ["Year", "Days", "Event", "Age"])
     dat["PYears"] = dat["Days"] / 365
-    dat["AgeCat"] = pd.cut(dat["Age"], 
-            bins = args.agecat, include_lowest=True)
+    dat["AgeCat"] = pd.cut(dat["Age"], labels = False, bins = args.agecat, include_lowest=True)
     dat = dat.groupby(["Year", "AgeCat"]).agg(
             Events = pd.NamedAgg("Event", sum),
             PYears = pd.NamedAgg("PYears", sum)
