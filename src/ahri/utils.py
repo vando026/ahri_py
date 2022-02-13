@@ -35,7 +35,7 @@ def add_year_test(dat, bdat, var = "obs_start"):
 
 def get_pop_n(edat, args):
     """Get # of all participants by year and age group"""
-    edat['AgeCat'] = pd.cut(edat['Age'], 
+    edat['AgeCat'] = pd.cut(edat['Age'], labels = None,
             bins = args.agecat, include_lowest=True)
     gdat = edat.groupby(["Year", "AgeCat"]).agg(
             N = pd.NamedAgg("IIntID", len)).reset_index()
