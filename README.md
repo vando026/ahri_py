@@ -26,6 +26,8 @@ The wiki help pages serve as a short introduction to the ahri library.
     <https://github.com/vando026/ahri_py/wiki/3-HIV-incidence>.
 
 
+![demo1](demo.gif)
+
 |                                                                                                                                                                                                                                                                        |
 |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Disclaimer: This is not an official AHRI site. The ahri library is a collaboration between researchers using the AHRI datasets. Decisions made in the code about how to use the data are independent of the views, opinions, and policies of AHRI and its employees. |
