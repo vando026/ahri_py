@@ -8,7 +8,7 @@ class DataProc(SetArgs):
     """
     A class that provides methods to read in the standard AHRI .dta files
     (Stata files), write them to .pkl format, and standardize data
-    transformations accross the datatsets.
+    transformations across the datatsets.
 
     Attributes
     ----------
@@ -23,7 +23,7 @@ class DataProc(SetArgs):
         read in the Surviellance .dta dataset
 
     pip_dta()
-        read in the PIP data to identify ACIDS from TASP areas
+        create a PIP dataset to identify ACDIS and PIP areas
 
     get_hiv()
         load the HIV .pkl file into memory
@@ -60,7 +60,7 @@ class DataProc(SetArgs):
         self.args = args
 
     def pip_dta(self):
-        """ read in PIP data to identify ACIDS from TASP areas
+        """ Create a PIP dataset to identify ACDIS and PIP areas
         Parameters
         ----------
         None
