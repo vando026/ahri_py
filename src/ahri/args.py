@@ -1,5 +1,6 @@
 import os
 import numpy as np
+# TODO: does mp need to be here
 import multiprocessing as mp
 
 class SetFiles:
