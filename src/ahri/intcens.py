@@ -40,19 +40,47 @@ class ReadUniReg:
         dat = dat.astype(np.float64)
         return dat
 
+tt = ReadUniReg(infile = "/home/alain/Seafile/Heidelberg/Projects/Inc4/data/res_dat_2.txt")
+tt = ReadUniReg(infile = "/home/alain/Seafile/AHRI_Data/intcens/res_dat_mnth.txt")
+
 class UniReg(ReadUniReg):
     def __init__(self,
         xpath, root, input, output, model, 
-        convergence_threshold = 0.01, 
+        convergence_threshold = 0.01,
+        subject_id = None, 
         inf_char = "Inf", r = 0.0):
-        subprocess.Popen([
-            xpath, 
-            "--in", os.path.join(root, input), 
-            "--out", os.path.join(root, output), 
-            "--model",  model,
+        self.xpath = xpath
+        self.root = root
+        self.input = input
+        self.output = output
+        self.model = model
+        self.convergence_threshold = convergence_threshold
+        self.subject_id = subject_id
+        self.inf_char = inf_char
+        self.r = r
+
+    def run(self):
+        cmd = [self.xpath, 
+            "--in", os.path.join(self.root, self.input), 
+            "--out", os.path.join(self.root, self.output), 
+            "--model",  self.model,
             "--sep", '" "',
-            "--inf_char", f'"{inf_char}"',
-            "--r", f"{r}",
-            "--convergence_threshold", f"{convergence_threshold}"])
-        ReadUniReg.__init__(self, os.path.join(root, output))
+            "--inf_char", f'"{self.inf_char}"',
+            "--r", f"{self.r}",
+            "--convergence_threshold", f"{self.convergence_threshold}"]
+        if self.subject_id != None:
+            cmd.append("--subject_id")
+            cmd.append(f"{self.subject_id}")
+        subprocess.Popen(cmd)
+        #
+        # ReadUniReg.__init__(self, os.path.join(self.root, self.output))
+
+
+tt = UniReg(
+    xpath = "/home/alain/Seafile/Programs/Python/library/ahri_dev/src/ahri/unireg",
+    root = "/home/alain/Seafile/Programs/R/IntCens/IntCens2",
+    input = "time_dep_cov.txt",
+    output = "res_data1.txt",
+    model = "(Examination_Time, Status) = Age", 
+    subject_id= "Subject_ID", inf_char = "inf")
 
