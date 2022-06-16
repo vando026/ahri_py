@@ -40,9 +40,6 @@ class ReadUniReg:
         dat = dat.astype(np.float64)
         return dat
 
-tt = ReadUniReg(infile = "/home/alain/Seafile/Heidelberg/Projects/Inc4/data/res_dat_2.txt")
-tt = ReadUniReg(infile = "/home/alain/Seafile/AHRI_Data/intcens/res_dat_mnth.txt")
-
 class UniReg(ReadUniReg):
     def __init__(self,
         xpath, root, input, output, model, 
@@ -58,11 +55,4 @@ class UniReg(ReadUniReg):
             "--r", f"{r}",
             "--convergence_threshold", f"{convergence_threshold}"])
         ReadUniReg.__init__(self, os.path.join(root, output))
-
-tt = UniReg(
-    xpath = "/home/alain/Seafile/Programs/Python/library/ahri_dev/src/ahri/unireg",
-    root = "/home/alain/Seafile/Heidelberg/Projects/Inc4/data",
-    input = "input_data_1.txt",
-    output = "res_data1.txt",
-    model = "(left, right) = Age")
 
