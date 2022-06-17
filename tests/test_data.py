@@ -4,70 +4,74 @@ from ahri import utils
 from ahri.args import SetFiles, SetArgs
 from ahri.dataproc import DataProc
 import numpy as np
+import pandas as pd
 import os
+# import package_resources
 
 # in ipython run
 # %run test_data.py "/home/alain/Seafile/AHRI_Data/2020"
 
 class TestAHRI(unittest.TestCase):
 
-    root = os.path.dirname(os.path.realpath(__file__)) 
-    root = '/home/alain/Seafile/Programs/Python/library/ahri_dev/tests'
-    args = SetArgs(root = root, years = np.arange(2005, 2020),
-            drop_tasp = False)
-    args.hiv_pkl = os.path.join(root, 'python/hiv.pkl')
-    args.epi_pkl = os.path.join(root, 'python/epi.pkl')
+    # root = os.path.dirname(os.path.realpath(__file__)) 
+    root = '/home/alain/Seafile/Programs/Python/library/ahri_dev/src/ahri/data'
+    fpaths = SetFiles(root, 
+        hiv_dta = "RD05-99_ACDIS_HIV_Sample.dta",
+        bst_dta = "RD01-03_ACDIS_BS_Sample.dta",
+        epi_dta = "SurveillanceEpisodes_Sample.dta",
+        wgh_dta = "RD03-99_ACDIS_WGH_Sample.dta",
+        mgh_dta = "RD04-99_ACDIS_MGH_Sample.dta")
+    args = SetArgs(file_paths = fpaths)
     dtest = DataProc(args)
 
-    hdat = dtest.get_hiv()
-    sdat = dtest.set_hiv()
-    rtdat = dtest.get_repeat_testers(sdat)
-    edat = dtest.get_epi()
-    esdat = dtest.set_epi()
+    bdat = dtest.bst_dta(write_pkl = False)
+    hdat = dtest.hiv_dta(write_pkl = False)
+    hdat2 = utils.drop_tasp(hdat, bdat)
+    edat = dtest.epi_dta(write_pkl = False)
+    edat2 = utils.drop_tasp(edat, bdat)
 
-    def test_hiv_nrows(self):
-        nrows = self.hdat.shape[0]
-        self.assertEqual(nrows, 500)
+    def test_bst_dta(self):
+      self.assertEqual(self.bdat.shape[0], 7)
+      self.assertEqual(self.bdat.shape[1], 18)
+      self.assertEqual(len(np.unique(self.bdat.BSIntID)), 7)
+      self.assertEqual(self.bdat[self.bdat["PIPSA"]. \
+          isin(["Southern PIPSA"])].shape[0], 6)
 
-    def test_hivpos_n(self):
-        hiv_vals = self.hdat.HIVPositive.count()
-        self.assertEqual(hiv_vals, 150)
+    def test_read_hiv1(self):
+      self.assertEqual(len(np.unique(self.hdat.IIntID)), 5)
+      self.assertEqual(self.hdat.shape[0], 14)
+      self.assertEqual(self.hdat.shape[1], 9)
+      self.assertEqual(len(np.unique(self.hdat.loc[self.hdat.Female == 1,
+          "IIntID"])), 3)
+      self.assertEqual(np.sum(self.hdat.Age), 427)
 
-    def test_fem_n(self):
-        fem_n = self.hdat.Female[self.hdat.Female == 1].count()
-        self.assertEqual(fem_n, 344)
+    def test_read_hiv2(self):
+      self.assertEqual(np.sort(np.unique((
+          self.hdat2.loc[~np.isnan(self.hdat2.BSIntID), \
+              "BSIntID"])).astype(int)).tolist(), \
+          [6496, 9305, 15588, 17843])
+      self.assertEqual(self.hdat2.shape[1], 9)
+      self.assertEqual(len(np.unique(self.hdat2.loc[self.hdat2.Female == 1,
+          "IIntID"])), 3)
+      self.assertEqual(np.sum(self.hdat2.Age), 343)
 
-    def test_hiv_nrows2(self):
-        nrows = self.sdat.shape[0]
-        self.assertEqual(nrows, 305)
+    def test_read_epi(self):
+      self.assertEqual(len(np.unique(self.edat.IIntID)), 5) 
+      self.assertEqual(len(np.unique(self.edat.BSIntID)), 7) 
+      self.assertEqual(len(np.unique(self.edat.loc[self.edat.Female==1, "IIntID"])), 3) 
+      self.assertEqual(self.edat.shape[1], 8) 
+      self.assertEqual(np.sort(np.unique(self.edat.BSIntID)).tolist(), \
+              [ 616, 3455, 6496, 9305, 15588, 16563, 17843 ])
 
-    def test_hiv_fem_n2(self):
-        fem_n = self.sdat.Female[self.sdat.Female == 1].count()
-        self.assertEqual(fem_n, 192)
+    def test_read_epi2(self):
+      self.assertEqual(len(np.unique(self.edat2.IIntID)), 5) 
+      self.assertEqual(len(np.unique(self.edat2.BSIntID)), 6) 
+      self.assertEqual(len(np.unique(self.edat2.loc[self.edat2.Female==1, \
+          "IIntID"])), 3) 
+      self.assertEqual(self.edat2.shape[1], 8) 
+      self.assertEqual(np.sort(np.unique(self.edat2.BSIntID)).tolist(), \
+              [3455, 6496, 9305, 15588, 16563, 17843])
 
-    def test_hiv_year(self):
-        year = np.mean(self.sdat.Year).round(3)
-        self.assertEqual(year, 2011.157)
-
-    def test_rt_nrow(self):
-        nrow = self.rtdat.shape[0]
-        self.assertEqual(nrow, 50)
-        nval = self.rtdat.sero_event.sum()
-        self.assertEqual(nval, 8)
-
-    def test_epi_nrow(self):
-        nrow = self.edat.shape[0]
-        self.assertEqual(nrow, 500)
-        nrow = self.edat.Female.value_counts()
-        self.assertEqual(nrow[0], 197)
-
-    def test_sepi_nrow(self):
-        nrow = self.esdat.shape[0]
-        self.assertEqual(nrow, 179)
-        nrow = self.esdat.Female.value_counts()
-        self.assertEqual(nrow[0], 93)
-        nsum = self.esdat.Age.sum()
-        self.assertEqual(nsum, 7037)
 
 if __name__ == '__main__':
     unittest.main()

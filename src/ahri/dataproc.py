@@ -16,37 +16,40 @@ class DataProc(SetArgs):
     Methods
     -------
 
-    hiv_dta()
+    hiv_dta(self)
         read in the HIV .dta dataset
 
-    epi_dta(addvars = None)
+    epi_dta(self, addvars = None)
         read in the Surviellance .dta dataset
 
-    pip_dta()
-        create a PIP dataset to identify ACDIS and PIP areas
+    bst_dta(self)
+        read in the Bounded Structures .dta dataset
 
-    get_hiv()
+    get_hiv(self)
         load the HIV .pkl file into memory
 
-    get_epi()
+    get_epi(self)
         load the Surveillance .pkl file into memory
 
-    get_pip()
-        load the PIP .pkl file into memory
+    get_bst(self, write_pkl = True)
+        load the Bounded Structures .pkl file into memory
 
-    set_hiv(dat = None)
+    set_hiv(self, dat = None)
         set the HIV .pkl file according to user supplied arguments in the
         SetArgs class
 
-    set_epi(dat = None)
+    set_epi(self, dat = None)
         set the Surveillance .pkl file according to user supplied arguments in the
         SetArgs class
 
-    set_data(dat)
+    set_data(self, dat)
         method to standardize transformation of the datasets
 
-    get_repeat_testers(dat = None)
+    get_repeat_testers(self, dat = None)
         method to create dataset of HIV repeat-testers
+
+    get_birth_dates(self)
+        get birthdates from the Surveillance .pkl dataset
     """
 
     def __init__(self, args):
@@ -59,21 +62,24 @@ class DataProc(SetArgs):
 
         self.args = args
 
-    def pip_dta(self):
-        """ Create a PIP dataset to identify ACDIS and PIP areas
+    def bst_dta(self, write_pkl = True):
+        """ Read in the Bounded Structures .dta dataset, harmonize variable
+        names. 
+
         Parameters
         ----------
-        None
+        write_pk : bool :
+            write the file to .pkl
         """
 
-        dat = pd.read_stata(self.args.bsifile, 
-                columns = ['BSIntId', 'PIPSA'])
+        dat = pd.read_stata(self.args.bst_dta) 
         dat = dat.rename(columns = {'BSIntId': 'BSIntID'})
-        dat.to_pickle(self.args.pip_pkl)
-        print(f"File saved to {self.args.pip_pkl}\n")
+        if write_pkl:
+            dat.to_pickle(self.args.bst_pkl)
+            print(f"File saved to {self.args.bst_pkl}\n")
         return(dat)
 
-    def hiv_dta(self):
+    def hiv_dta(self, write_pkl = True):
         """ 
         Read in the HIV .dta dataset, keep subset of HIV test variables,
         harmonize variable names, drop irregular values for Men/Women,
@@ -81,14 +87,15 @@ class DataProc(SetArgs):
 
         Parameters
         ----------
-        None
+        write_pk : bool :
+            write the file to .pkl
         """
 
         dcols = ["IIntId", "ResidencyBSIntId", "VisitDate",
               "HIVResult", "Sex", "AgeAtVisit"]
         # if (addvars is not None):
             # dcols = dcols.append(addvars)
-        hiv = pd.read_stata(self.args.hivfile, columns = dcols)
+        hiv = pd.read_stata(self.args.hiv_dta, columns = dcols)
         hiv = hiv.rename(columns = {
           'IIntId':'IIntID',
           'ResidencyBSIntId':'BSIntID',
@@ -101,11 +108,12 @@ class DataProc(SetArgs):
         hiv['HIVNegative'] = hiv.VisitDate[hiv.HIVResult == 'Negative']
         hiv['HIVPositive'] = hiv.VisitDate[hiv.HIVResult == 'Positive']
         hiv['Year'] = pd.DatetimeIndex(hiv.VisitDate).year
-        hiv.to_pickle(self.args.hiv_pkl)
-        print(f"File saved to {self.args.hiv_pkl}\n")
+        if write_pkl:
+            hiv.to_pickle(self.args.hiv_pkl)
+            print(f"File saved to {self.args.hiv_pkl}\n")
         return(hiv)
 
-    def epi_dta(self, addvars = None):     
+    def epi_dta(self, addvars = None, write_pkl = True):     
         """ 
         Read in the Surveillance .dta dataset, keep subset of variables,
         harmonize variable names, drop irregular values for Men/Women,
@@ -115,10 +123,12 @@ class DataProc(SetArgs):
         ----------
         addvars: list 
             add variables to the subset of variables selected from the .dta dataset
+        write_pk : bool :
+            write the file to .pkl
         """
 
         print("Reading data, this may take time...")
-        dat = pd.read_stata(self.args.epifile)
+        dat = pd.read_stata(self.args.epi_dta)
         dat = dat.rename(columns = {
             'IndividualId':'IIntID', 'LocationId':'BSIntID', 
             'CalendarYear': 'Year', 'Sex':'Female', 'Days':'ExpDays', 
@@ -131,8 +141,9 @@ class DataProc(SetArgs):
         dat = dat[dcols]
         dat = dat[dat.Female.isin(['Female', 'Male'])]
         dat = dat.assign(Female = (dat.Female=='Female').astype(int))
-        dat.to_pickle(self.args.epi_pkl)
-        print(f"File saved to {self.args.epi_pkl}\n")
+        if write_pkl:
+            dat.to_pickle(self.args.epi_pkl)
+            print(f"File saved to {self.args.epi_pkl}\n")
         return(dat)
 
     def get_hiv(self):
@@ -149,7 +160,7 @@ class DataProc(SetArgs):
 
     def get_epi(self):
         """
-        Read the pickled Surveillance dataset into memory
+        Load the pickled Surveillance dataset into memory
 
         Parameters
         ----------
@@ -159,15 +170,15 @@ class DataProc(SetArgs):
         dat = pd.read_pickle(self.args.epi_pkl)
         return(dat)
 
-    def get_pip(self):
-        """Read the pickled PIP dataset into memory
+    def get_bst(self):
+        """Load the pickled Bounded Structures dataset into memory
 
         Parameters
         ----------
         None
         """
 
-        dat = pd.read_pickle(self.args.pip_pkl)
+        dat = pd.read_pickle(self.args.bst_pkl)
         return(dat)
 
     def set_data(self, dat):
@@ -190,7 +201,7 @@ class DataProc(SetArgs):
                     (dat.Age > self.args.age[s][1])) & 
                 dat.Year.isin(self.args.years)]
         if (self.args.drop_tasp): 
-          dat = utils.drop_tasp(dat, self.get_pip()) 
+          dat = utils.drop_tasp(dat, self.get_bst()) 
         return(dat)
 
     def set_hiv(self):
@@ -250,4 +261,16 @@ class DataProc(SetArgs):
         rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
         return(rt)
 
+    def get_birth_dates(self):
+        """
+        Get birthdates from the Surveillance .pkl dataset
+
+        Parameters
+        ----------
+        None
+        """
+        dat = pd.read_pickle(self.args.epi_pkl)
+        dat = dat[["IIntID", "DoB"]]
+        dat["BirthYear"] = pd.DatetimeIndex(dat["DoB"]).year
+        return dat
 

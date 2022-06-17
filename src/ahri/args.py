@@ -1,6 +1,5 @@
 import os
 import numpy as np
-# TODO: does mp need to be here
 import multiprocessing as mp
 
 class SetFiles:
@@ -9,15 +8,15 @@ class SetFiles:
 
     Attributes
     ----------
-    hivfile : str
+    hiv_dta : str
         name of hiv .dta dataset
-    epifile : str
+    epi_dta : str
         name of surviellance .dta dataset
-    wghfile : str
+    wgh_dta : str
         name of women's .dta general health dataset
-    mghfile : str
+    mgh_dta : str
         name of men's .dta general health dataset
-    bsifile : str
+    bst_dta : str
         name of bounded structurs .dta dataset
     hiv_pkl : str
         name of hiv .pkl dataset
@@ -27,8 +26,8 @@ class SetFiles:
         name of women's .pkl general health dataset
     mgh_pkl : str
         name of men's .pkl general health dataset
-    bsc_pkl : str
-        name of bounded structurs .pkl dataset
+    bst_pkl : str
+        name of bounded structures .pkl dataset
     pip_pkl : str
         name of pip .pkl dataset
 
@@ -36,10 +35,6 @@ class SetFiles:
     -------
     set_path()
         set the root path to the ahri .dta datasets
-    show_read()
-        shows the read paths to the .dta datasets
-    show_pkl()
-        shows the write paths to the .pkl files
     """
 
     def setpath(self, x): 
@@ -51,61 +46,108 @@ class SetFiles:
 
         return os.path.join(self.root, x)
 
-    def __init__(self, root = "~"):
+    def __init__(self, root, 
+        hiv_dta = "RD05-99 ACDIS HIV All.dta",
+        epi_dta = "SurveillanceEpisodes.dta",
+        wgh_dta = "RD03-99 ACDIS WGH ALL.dta",
+        mgh_dta = "RD04-99 ACDIS MGH ALL.dta", 
+        bst_dta = "RD01-03 ACDIS BoundedStructures.dta",
+        hiv_pkl = "ACDIS_HIV_All.pkl", 
+        epi_pkl = "SurveillanceEpisodes.pkl",
+        wgh_pkl = "ACDIS_WGH_ALL.pkl", 
+        mgh_pkl = "ACDIS_MGH_ALL.pkl", 
+        bst_pkl = "ACDIS_BoundedStructures.pkl",
+        pip_pkl = "ACDIS_PIP.pkl"):
         """
         Paramaters
         ----------
         root : the name of the root path to the AHRI datasets
+        hiv_dta : name of hiv .dta dataset
+        epi_dta : name of surviellance .dta dataset
+        wgh_dta : name of women's .dta general health dataset
+        mgh_dta : name of men's .dta general health dataset
+        bst_dta : name of bounded structurs .dta dataset
+        hiv_pkl : name of hiv .pkl dataset
+        epi_pkl : name of surveillance .pkl dataset
+        wgh_pkl : name of women's .pkl general health dataset
+        mgh_pkl : name of men's .pkl general health dataset
+        bst_pkl : name of bounded structurs .pkl dataset
+        pip_pkl : name of pip .pkl dataset
         """
 
         self.root = root
-        self.hivfile = self.setpath("RD05-99 ACDIS HIV All.dta")
-        self.epifile = self.setpath("SurveillanceEpisodes.dta")
-        self.wghfile = self.setpath("RD03-99 ACDIS WGH ALL.dta")
-        self.mghfile = self.setpath("RD04-99 ACDIS MGH ALL.dta") 
-        self.bsifile = self.setpath("RD01-03 ACDIS BoundedStructures.dta")
-        self.hiv_pkl = self.setpath("python/ACDIS_HIV_All.pkl") 
-        self.epi_pkl = self.setpath("python/SurveillanceEpisodes.pkl")
-        self.wgh_pkl = self.setpath("python/ACDIS_WGH_ALL.pkl") 
-        self.mgh_pkl = self.setpath("python/ACDIS_MGH_ALL.pkl") 
-        self.bsc_pkl = self.setpath("python/ACDIS_BoundedStructures.pkl")
-        self.pip_pkl = self.setpath("python/ACDIS_PIP.pkl")
+        self.hiv_dta = self.setpath(hiv_dta)
+        self.epi_dta = self.setpath(epi_dta)
+        self.wgh_dta = self.setpath(wgh_dta)
+        self.mgh_dta = self.setpath(mgh_dta)
+        self.bst_dta = self.setpath(bst_dta)
+        self.hiv_pkl = self.setpath(hiv_pkl)
+        self.epi_pkl = self.setpath(epi_pkl)
+        self.wgh_pkl = self.setpath(wgh_pkl)
+        self.mgh_pkl = self.setpath(mgh_pkl)
+        self.bst_pkl = self.setpath(bst_pkl)
+        self.pip_pkl = self.setpath(pip_pkl)
         # Check if folder exists
         # TODO: allow user to change its name
-        if (os.path.exists(os.path.join(root, 'python'))):
-            pass
-        else:
-            print(f"ahri: Warning! check if directory {root}/python exists")
+        # if (os.path.exists(os.path.join(root, 'python'))):
+            # pass
+        # else:
+            # print(f"ahri: Warning! check if directory {root}/python exists")
 
-    def show_read(self): 
-        """
-        Print out the file paths to the ahri .dta datasets
-        """
-
-        print(self.hivfile, self.epifile, self.bsifile, sep = "\n")
-
-    def show_pkl(self): 
-        """
-        Print out the file paths to the ahri .pkl datasets
-        """
-
-        print(self.hiv_pkl, self.epi_pkl, self.pip_pkl, sep = "\n")
-
-
-
-
-class SetArgs(SetFiles):
+class SetArgs:
     """
     A class for setting and storing user supplied parameters
 
 
     Attributes
     ----------
-    See the parameters values documented below
+    root : str  
+        the path to the release year folder with the AHRI datasets
+    years : list 
+        keep only observations from the specified years
+    age : dict 
+        set the age ranges for males ("Mal") and females ("Fem")
+    agecat: list 
+        a list of age intervals to great age groups
+    ageby : int  
+        if agecat is None, age categories are created using the 
+        age min/max and ageby values
+    nsim : int  
+        number of imputations for the HIV seroconversion dates
+    drop_tasp : bool 
+        drop observations from the Northern (TasP) areas
+    impute_method: str 
+        type of imputation: random-point or midpoint
+    mcores : int 
+        number of cores to use for incidence rate estimation, 
+        uses the multiprocessing library to select cores
+    verbose : bool 
+        show the progress bar
+    hiv_dta : str
+        name of hiv .dta dataset
+    epi_dta : str
+        name of surviellance .dta dataset
+    wgh_dta : str
+        name of women's .dta general health dataset
+    mgh_dta : str
+        name of men's .dta general health dataset
+    bst_dta : str
+        name of bounded structurs .dta dataset
+    hiv_pkl : str
+        name of hiv .pkl dataset
+    epi_pkl : str
+        name of surviellance .pkl dataset
+    wgh_pkl : str
+        name of women's .pkl general health dataset
+    mgh_pkl : str
+        name of men's .pkl general health dataset
+    bst_pkl : str
+        name of bounded structurs .pkl dataset
+    pip_pkl : str
+        name of pip .pkl dataset
     """
 
-    def __init__(self, 
-        root = "/home/alain/",
+    def __init__(self, file_paths, 
         years = np.arange(2005, 2020),
         age = {"Fem": [15, 49], "Mal": [15, 54]}, 
         agecat = None, ageby = 5,
@@ -136,12 +178,18 @@ class SetArgs(SetFiles):
             uses the multiprocessing library to select cores
         verbose : bool 
             show the progress bar
+
+        Methods
+        -------
+        show_dta()
+            shows the read paths to the .dta datasets
+        show_pkl()
+            shows the write paths to the .pkl files
         """
 
         if (agecat is None):
             self.agecat = np.arange(np.min(list(age.values())),
               np.max(list(age.values())) + ageby, ageby)
-        # codes for sex
         sdict = {"Fem": 1, "Mal": 0}
         self.sex = {s:sdict[s] for s in age.keys()}
         self.years = years
@@ -152,4 +200,32 @@ class SetArgs(SetFiles):
         self.mcores = mcores
         self.verbose = verbose
         self.drop_tasp = drop_tasp
-        SetFiles.__init__(self, root)
+        self.hiv_dta = file_paths.hiv_dta
+        self.epi_dta = file_paths.epi_dta        
+        self.wgh_dta = file_paths.wgh_dta
+        self.mgh_dta = file_paths.mgh_dta
+        self.bst_dta = file_paths.bst_dta
+        self.hiv_pkl = file_paths.hiv_pkl
+        self.epi_pkl = file_paths.epi_pkl
+        self.wgh_pkl = file_paths.wgh_pkl
+        self.mgh_pkl = file_paths.mgh_pkl
+        self.bst_pkl = file_paths.bst_pkl
+        self.pip_pkl = file_paths.pip_pkl
+
+    def show_dta(self): 
+        """
+        Print out the file paths to the ahri .dta datasets
+        """
+
+        print(self.hiv_dta, self.epi_dta, self.bst_dta,
+                self.mgh_dta, self.wgh_dta, sep = "\n")
+
+    def show_pkl(self): 
+        """
+        Print out the file paths to the ahri .pkl datasets
+        """
+
+        print(self.hiv_pkl, self.epi_pkl, self.bst_pkl,
+                self.mgh_pkl, self.wgh_pkl, sep = "\n")
+
+
