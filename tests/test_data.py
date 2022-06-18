@@ -149,10 +149,15 @@ class SetData:
         self.args = args
         self.__obj = data
 
-    def set_data(self, args):
-        return SetData(data =
-            self.__obj[self.__obj.Female.isin(self.args.sex.values())], args = args)
+    def __repr__(self):
+        return f"{self.__obj}"
 
+    def set_data(self):
+        dat = self.__obj[self.__obj.Female.isin(self.args.sex.values())]
+        return SetData(data = dat , args = self.args)
+
+tt= SetData(hdat, args)
+tt.set_data()
 
 class MyTest(SetData):
 
@@ -166,7 +171,7 @@ class MyTest(SetData):
     def getData(self):
         return self.__obj
 
-    SetData.__init__(self.data, self.args)
+    SetData.__init__(self, data, args)
 
 tt = MyTest(args = args)
 tt.set_data()
