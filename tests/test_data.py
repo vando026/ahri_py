@@ -166,7 +166,7 @@ class MyTest(SetData):
     def getData(self):
         return self.__obj
 
-    SetData.__init__()
+    SetData.__init__(self.data, self.args)
 
 tt = MyTest(args = args)
 tt.set_data()
