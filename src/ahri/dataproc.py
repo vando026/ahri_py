@@ -183,7 +183,7 @@ class DataProc(SetArgs):
 
     def set_data(self, dat):
         """
-        Method to standardize the datasets by age, sex, and year. The values
+        Method to standardize the datasets by age, sex,  year, and area. The values
         for standardization are handled by the SetArgs class.
 
         Parameters
@@ -201,7 +201,7 @@ class DataProc(SetArgs):
                     (dat.Age > self.args.age[s][1])) & 
                 dat.Year.isin(self.args.years)]
         if (self.args.drop_tasp): 
-          dat = utils.drop_tasp(dat, self.get_bst()) 
+          dat = utils.drop_tasp(dat, self.bst_dta(write_pkl = False)) 
         return(dat)
 
     def set_hiv(self):
@@ -274,3 +274,8 @@ class DataProc(SetArgs):
         dat["BirthYear"] = pd.DatetimeIndex(dat["DoB"]).year
         return dat
 
+    def calc_age_cat(self, dat, name = "AgeCat"):
+        if "Age" not in dat.columns:
+            print(f"ahri: Warning! Dataset needs an Age column to create Age categories")
+        dat[name] = pd.cut(dat["Age"], self.args.agecat, include_lowest = True)
+        return dat

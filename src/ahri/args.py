@@ -87,12 +87,23 @@ class SetFiles:
         self.mgh_pkl = self.setpath(mgh_pkl)
         self.bst_pkl = self.setpath(bst_pkl)
         self.pip_pkl = self.setpath(pip_pkl)
-        # Check if folder exists
-        # TODO: allow user to change its name
-        # if (os.path.exists(os.path.join(root, 'python'))):
-            # pass
-        # else:
-            # print(f"ahri: Warning! check if directory {root}/python exists")
+
+    def show_dta(self): 
+        """
+        Print out the file paths to the ahri .dta datasets
+        """
+
+        print(self.hiv_dta, self.epi_dta, self.bst_dta,
+                self.mgh_dta, self.wgh_dta, sep = "\n")
+
+    def show_pkl(self): 
+        """
+        Print out the file paths to the ahri .pkl datasets
+        """
+
+        print(self.hiv_pkl, self.epi_pkl, self.bst_pkl,
+                self.mgh_pkl, self.wgh_pkl, sep = "\n")
+
 
 class SetArgs:
     """
@@ -147,17 +158,17 @@ class SetArgs:
         name of pip .pkl dataset
     """
 
-    def __init__(self, file_paths, 
+    def __init__(self, paths, 
         years = np.arange(2005, 2020),
         age = {"Fem": [15, 49], "Mal": [15, 54]}, 
-        agecat = None, ageby = 5,
+        ageby = 5,
         drop_tasp = True, verbose = True,
         nsim = 1, imp_method = None,
         mcores = mp.cpu_count()):
         """Parameters
         -------------
-        root : str  
-            the path to the release year folder with the AHRI datasets
+        paths : object  
+            an instance from SetFiles
         years : list 
             keep only observations from the specified years
         age : dict 
@@ -176,20 +187,11 @@ class SetArgs:
         mcores : int 
             number of cores to use for incidence rate estimation, 
             uses the multiprocessing library to select cores
-        verbose : bool 
-            show the progress bar
 
-        Methods
-        -------
-        show_dta()
-            shows the read paths to the .dta datasets
-        show_pkl()
-            shows the write paths to the .pkl files
         """
 
-        if (agecat is None):
-            self.agecat = np.arange(np.min(list(age.values())),
-              np.max(list(age.values())) + ageby, ageby)
+        self.agecat = np.arange(np.min(list(age.values())),
+          np.max(list(age.values())) + ageby, ageby)
         sdict = {"Fem": 1, "Mal": 0}
         self.sex = {s:sdict[s] for s in age.keys()}
         self.years = years
@@ -200,32 +202,14 @@ class SetArgs:
         self.mcores = mcores
         self.verbose = verbose
         self.drop_tasp = drop_tasp
-        self.hiv_dta = file_paths.hiv_dta
-        self.epi_dta = file_paths.epi_dta        
-        self.wgh_dta = file_paths.wgh_dta
-        self.mgh_dta = file_paths.mgh_dta
-        self.bst_dta = file_paths.bst_dta
-        self.hiv_pkl = file_paths.hiv_pkl
-        self.epi_pkl = file_paths.epi_pkl
-        self.wgh_pkl = file_paths.wgh_pkl
-        self.mgh_pkl = file_paths.mgh_pkl
-        self.bst_pkl = file_paths.bst_pkl
-        self.pip_pkl = file_paths.pip_pkl
-
-    def show_dta(self): 
-        """
-        Print out the file paths to the ahri .dta datasets
-        """
-
-        print(self.hiv_dta, self.epi_dta, self.bst_dta,
-                self.mgh_dta, self.wgh_dta, sep = "\n")
-
-    def show_pkl(self): 
-        """
-        Print out the file paths to the ahri .pkl datasets
-        """
-
-        print(self.hiv_pkl, self.epi_pkl, self.bst_pkl,
-                self.mgh_pkl, self.wgh_pkl, sep = "\n")
-
-
+        self.hiv_dta = paths.hiv_dta
+        self.epi_dta = paths.epi_dta        
+        self.wgh_dta = paths.wgh_dta
+        self.mgh_dta = paths.mgh_dta
+        self.bst_dta = paths.bst_dta
+        self.hiv_pkl = paths.hiv_pkl
+        self.epi_pkl = paths.epi_pkl
+        self.wgh_pkl = paths.wgh_pkl
+        self.mgh_pkl = paths.mgh_pkl
+        self.bst_pkl = paths.bst_pkl
+        self.pip_pkl = paths.pip_pkl
