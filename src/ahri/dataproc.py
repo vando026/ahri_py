@@ -4,7 +4,7 @@ from ahri.args import SetArgs
 from ahri import utils
 from functools import reduce
 
-class DataProc(SetArgs):
+class DataProc:
     """
     A class that provides methods to read in the standard AHRI .dta files
     (Stata files), write them to .pkl format, and standardize data
