@@ -76,7 +76,7 @@ class TestAHRI(unittest.TestCase):
 
 
     def test_get_hiv1(self):
-        args = SetArgs(file_paths = self.fpaths,
+        args = SetArgs(paths = self.fpaths,
             years = np.arange(2007, 2015), 
             age = {"Fem": [40, 80]})
         dtest = DataProc(args)
@@ -88,7 +88,7 @@ class TestAHRI(unittest.TestCase):
         self.assertEqual(hiv1.IIntID.tolist(), [740])
 
     def test_get_hiv0(self):
-        args = SetArgs(file_paths = self.fpaths,
+        args = SetArgs(paths = self.fpaths,
             years = np.arange(2005, 2011), 
             age = {"Mal": [20, 25]},
             drop_tasp = False)
@@ -103,7 +103,7 @@ class TestAHRI(unittest.TestCase):
         self.assertEqual(len(hiv.loc[hiv.AgeCat.astype(str) == "[20, 25)", "IIntID"]), 1)
 
     def test_age_cat(self):
-        args = SetArgs(file_paths = self.fpaths,
+        args = SetArgs(paths = self.fpaths,
           years = np.arange(2001, 2018),
           age = {"Fem": [15, 54], "Mal": [15, 54]})
         dtest = DataProc(args)
@@ -123,7 +123,7 @@ class TestAHRI(unittest.TestCase):
         self.assertEqual(len(hiv.loc[hiv.AgeCat.astype(str) == "[70, 75)", "IIntID"]), 0)
     
     def test_hiv_equal(self):
-        args = SetArgs(file_paths = self.fpaths,
+        args = SetArgs(paths = self.fpaths,
           years = np.arange(2005, 2017),
           age = {"Fem": [15, 54], "Mal": [15, 54]})
         dtest = DataProc(args)
@@ -136,7 +136,7 @@ class TestAHRI(unittest.TestCase):
         self.assertTrue(all(hiv1 == hiv))
 
     def test_epi_equal(self):
-        args = SetArgs(file_paths = self.fpaths,
+        args = SetArgs(paths = self.fpaths,
             years = np.arange(2010, 2020), 
             age = {"Fem": [16, 60], "Mal": [16, 60]})
         dtest = DataProc(args)
@@ -144,251 +144,6 @@ class TestAHRI(unittest.TestCase):
         edat = dtest.set_data(edat)
         edat1 = dtest.set_epi()
         self.assertTrue(all(edat == edat1))
-
-class EpiData(CreateVars):
-    def __init__(self, data = pd.read_pickle(args.epi_pkl)):
-        self.data = data
-        # self.args = args
-        super().__init__(data)
-
-    def __repr__(self):
-        return f"{self.data}" 
-
-    def get_epi(self):
-        return self.data
-
-class SetData(pd.DataFrame):
-    def __init__(self, *args):
-        pd.DataFrame.__init__(self, *args)
-        self.data = self
-        self
-
-    def set_data(self, *args):
-        data = self.data
-        data = self[self.Female.isin(args.sex.values())]
-        self.data = data
-        return self
-
-yy = SetData(hdat).set_data(args)
-
-
-class HIVData(SetData):
-    def __init__(self):
-        super().__init__(self)
-
-    def __repr__(self):
-        return f"{self}" 
-
-    def get_hiv(self):
-        return self
-
-    def get_age_cat(self, name = "AgeCat"):
-        if "Age" not in self.columns:
-            print(f"ahri: Warning! Dataset needs an Age column to create Age categories")
-        self[name] = pd.cut(self["Age"], 
-                [15, 25, 50, 105], include_lowest = True)
-        return HIVData(self)
-    
-
-HIVData(hdat)
-
-    # def get_repeat_testers(self):
-    #     """
-    #     Get the repeat tester data from an HIV test dataset. Repeat-testers
-    #     have a minimum of two valid HIV test dates of which the first test is
-    #     an HIV-negative test result. 
-        
-    #     Parameters
-    #     ----------
-    #     dat : pandas dataframe
-    #         a dataframe from self.set_hiv()
-    #     """
-        
-    #     dat = self.data
-    #     if (dat is None): dat = self.set_hiv()
-    #     obs_start = utils.get_dates_min(dat, "HIVNegative", "obs_start")
-    #     early_pos = utils.get_dates_min(dat, "HIVPositive", "early_pos")
-    #     late_neg = utils.get_dates_max(dat, "HIVNegative", "late_neg")
-    #     late_pos = utils.get_dates_max(dat, "HIVPositive", "late_pos")
-    #     dat = dat[['IIntID', 'Female']].drop_duplicates()
-    #     dfs = [dat, obs_start, late_neg, early_pos, late_pos]
-    #     dt = reduce(lambda left,right: \
-    #     pd.merge(left,right,on='IIntID', how='left'), dfs)
-    #     # drop if late neg after early pos
-    #     dt['late_neg_after'] = (dt.late_neg > dt.early_pos) & \
-    #     pd.notna(dt.late_neg) & pd.notna(dt.early_pos)
-    #     rt = dt[dt.late_neg_after==False]. \
-    #     drop(['late_neg_after', 'late_pos'], axis=1)
-    #     # drop if no neg test
-    #     rt = rt[-(pd.isna(rt.obs_start) & pd.isna(rt.late_neg))] 
-    #     # drop if only 1 neg test and no pos test
-    #     rt = rt[-((rt.obs_start == rt.late_neg) & pd.isna(rt.early_pos))]
-    #     rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
-    #     self.data = rt
-    #     return HIVData(self.args, self.data)
-
-tt = HIVData(args)
-tt.get_hiv().shape
-tt.set_data()
-tt.set_data().shape
-tt.set_data().get_age_cat()
-
-class RepeatTesters(CreateVars):
-    def __init__(self, args, data = None):
-        if data is None:
-            self.data = pd.read_pickle(args.hiv_pkl)
-        else:
-            self.data = data
-        super().__init__(self.data, args)
-        self.args = args
-
-    def __repr__(self):
-        return f"{self.data}" 
-
-
-tt = HIVData(args)
-
-
-class SetData(DataProc):
-    def __init__(self, args):
-        self.data = data
-        self.args = args
-        super().__init__(self.data, args)
-
-    def __repr__(self):
-        return f"{self.data}" 
-
-    def set_data(self):
-        """
-        Method to standardize the datasets by age, sex,  year, and area. The values
-        for standardization are handled by the SetArgs class.
-
-        Parameters
-        ----------
-        dat : pandas dataframe
-            a pandas dataframe
-        """
-        dat = self.data
-        dat = dat[dat.Female.isin(list(self.args.sex.values()))]
-        for s in self.args.age.keys():
-            dat = dat[
-                ~((dat.Female == self.args.sex[s]) &
-                    (dat.Age < self.args.age[s][0])) &  
-                ~((dat.Female == self.args.sex[s]) &
-                    (dat.Age > self.args.age[s][1])) & 
-                dat.Year.isin(self.args.years)]
-        # if (self.args.drop_tasp): 
-          # dat = utils.drop_tasp(dat, self.bst_dta(write_pkl = False)) 
-        self.data = dat
-        return SetData(self.data, self.args)
-
-class CreateVars:
-    def __init__(self, data, args):
-        self.data = data
-        self.args = args
-
-    def get_age_cat(self, name = "AgeCat"):
-        if "Age" not in self.data.columns:
-            print(f"ahri: Warning! Dataset needs an Age column to create Age categories")
-        self.data[name] = pd.cut(self.data["Age"], 
-                self.args.agecat, include_lowest = True)
-        return CreateVars(self.data, self.args)
-
-HIVData(args).get_age_cat().data
-
-# HIVData(args).get_data()
-# HIVData(args).get_hiv().set_data()
-# HIVData(args).get_data().set_data()
-# HIVData(args).get_hiv().set_data()
-# HIVData(args).get_hiv().set_data().calc_age_cat()
-# HIVData(args).get_hiv().get_repeat_testers().calc_age_cat()
-
-class DataProc2:
-    def __init__(self, args):
-        self.args = args
-        self.hiv = HIVData(self.args)
-        self.epi = EpiData(self.args)
-
-hiv_dta = root + "/ACDIS_HIV_All.pkl"
-hdat = pd.read_pickle(hiv_dta)
-
-class HIVData(SetArgs):
-    def __init__(self, data):
-        # self.data = pd.read_pickle(root + "/" + hiv_dta)
-        self.data = data
-
-    def __repr__(self):
-        return f"{self.data}"
-
-    def get_hiv(self):
-        return self.data
-
-    def calc_age_cat(self, name = "AgeCat"):
-        if "Age" not in self.data.columns:
-            print(f"ahri: Warning! Dataset needs an Age column to create Age categories")
-        self.data[name] = pd.cut(self.data["Age"], [15, 25, 50, 105], include_lowest = True)
-        return HIVData(self.data)
-
-tt = HIVData(hdat)
-yy = tt.get_hiv()
-tt.calc_age_cat()
-
-
-
-class DataProc3(SetArgs):
-    def __init__(self, args):
-        super().__init__(
-            
-
-
-                )
-        self.args = args
-        print(super())
-
-tt = DataProc3(args)
-
-
-
-
-epi = EpiData(args)
-tt = epi.get_epi().get_age_cat()
-tt.shape
-epi.get_age_cat().data
-tt = DataProc2(args)
-tt.epi
-tt.hiv
-tt.get_hiv().set_data().calc_age_cat()
-tt.get_repeat_testers()
-
-
-pp = DataProc(args)
-pp.epi_dta()
-tt = HIVData(args).set_data()
-tt= HIVData(args).set_data().calc_age_cat()
-tt.calc_age_cat()
-
-class MyTest(HIVData):
-
-    def __init__(self, args):
-        self.args = args 
-        super().__init__(self.args)
-
-    # def __repr__(self):
-    #     return f"{self.__obj}"
-    
-
-    # def get_epi(self):
-    #     self.__epi = pd.read_pickle(self.args.epi_pkl)
-    #     return self.__epi
-
-
-tt = MyTest(args = args)
-# tt.get_epi()
-tt.get_hiv().set_data()
-tt.set_data()
-tt.set_age()
-tt.set_data().set_age
-tt.AgeSet()
 
 if __name__ == '__main__':
     unittest.main()

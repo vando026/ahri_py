@@ -261,21 +261,19 @@ class DataProc:
         rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
         return(rt)
 
-    def get_birth_dates(self):
-        """
-        Get birthdates from the Surveillance .pkl dataset
 
-        Parameters
-        ----------
-        None
-        """
-        dat = pd.read_pickle(self.args.epi_pkl)
-        dat = dat[["IIntID", "DoB"]]
-        dat["BirthYear"] = pd.DatetimeIndex(dat["DoB"]).year
+    def calc_age(self, dat, ref_time, name = "Age"):
+        hdat = pd.read_pickle(self.args.hiv_pkl)
+        edat = pd.read_pickle(self.args.epi_pkl)
+        bdat = utils.get_birth_year(edat, hdat)
+        dat = pd.merge(dat,  bdat, on = "IIntID", how = "left")
+        dat[name] = (pd.DatetimeIndex(dat[ref_time]).year -
+                dat["BirthYear"])
         return dat
 
     def calc_age_cat(self, dat, name = "AgeCat"):
         if "Age" not in dat.columns:
             print(f"ahri: Warning! Dataset needs an Age column to create Age categories")
-        dat[name] = pd.cut(dat["Age"], self.args.agecat, include_lowest = True)
+        dat[name] = pd.cut(dat["Age"], self.args.agecat, 
+                right = False, include_lowest = True)
         return dat

@@ -22,11 +22,23 @@ def get_dates(f):
 get_dates_min = get_dates(min)
 get_dates_max = get_dates(max)
 
-def get_birth_date(dat):
-    """Get birthdate and birthyear"""
-    dat = dat[["IIntID", "DoB"]]
-    dat = dat.drop_duplicates(["IIntID"])
-    return(dat)
+def get_birth_year(edat, hdat):
+    """
+    Get birthdates from the combined HIV and Surveillance .pkl datasets
+
+    Parameters
+    ----------
+    edat
+    bdat
+    """
+    edat["BirthYear"] = pd.DatetimeIndex(edat["DoB"]).year
+    edat = edat[["IIntID", "BirthYear"]]
+    hdat["BirthYear"] = pd.DatetimeIndex(hdat.VisitDate).year - hdat.Age
+    hdat = hdat[["IIntID", "BirthYear"]]
+    edat = pd.concat([edat, hdat], axis = 0)
+    edat = edat.sort_values(["IIntID", "BirthYear"])
+    edat = edat.groupby(["IIntID"]).first()
+    return edat
 
 def add_year_test(dat, bdat, var = "obs_start"):
     dat = pd.merge(dat, bdat, how = "left", on = "IIntID")
