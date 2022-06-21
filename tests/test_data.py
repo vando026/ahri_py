@@ -23,7 +23,7 @@ class TestAHRI(unittest.TestCase):
         wgh_dta = "RD03-99_ACDIS_WGH_Sample.dta",
         mgh_dta = "RD04-99_ACDIS_MGH_Sample.dta")
 
-    args = SetArgs(paths = fpaths)
+    args = SetArgs(paths = fpaths, verbose = False)
     dtest = DataProc(args)
 
     bdat = dtest.bst_dta(write_pkl = False)
@@ -110,7 +110,6 @@ class TestAHRI(unittest.TestCase):
         hdat = dtest.get_hiv()
         hiv = dtest.set_data(hdat)
         hiv = dtest.calc_age_cat(hiv)
-        print(hiv)
         self.assertEqual(np.sort(np.unique(hiv.IIntID)).tolist(), \
               [795, 800, 1356, 1436])
         self.assertTrue(np.min(hiv.Year) >= 2001)
@@ -138,7 +137,8 @@ class TestAHRI(unittest.TestCase):
     def test_epi_equal(self):
         args = SetArgs(paths = self.fpaths,
             years = np.arange(2010, 2020), 
-            age = {"Fem": [16, 60], "Mal": [16, 60]})
+            age = {"Fem": [16, 60], "Mal": [16, 60]},
+            verbose = False)
         dtest = DataProc(args)
         edat = dtest.epi_dta(write_pkl = False)
         edat = dtest.set_data(edat)

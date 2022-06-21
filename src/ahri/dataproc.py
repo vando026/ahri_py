@@ -48,8 +48,14 @@ class DataProc:
     get_repeat_testers(self, dat = None)
         method to create dataset of HIV repeat-testers
 
-    get_birth_dates(self)
+    get_birth_year(self)
         get birthdates from the Surveillance .pkl dataset
+
+    calc_age(self, dat, name, ref_time)
+        calculate age in years
+
+    calc_age_cat(self, dat, name)
+        calculate age categories 
     """
 
     def __init__(self, args):
@@ -127,7 +133,8 @@ class DataProc:
             write the file to .pkl
         """
 
-        print("Reading data, this may take time...")
+        if self.args.verbose:
+            print("Reading data, this may take time...")
         dat = pd.read_stata(self.args.epi_dta)
         dat = dat.rename(columns = {
             'IndividualId':'IIntID', 'LocationId':'BSIntID', 
@@ -263,17 +270,57 @@ class DataProc:
 
 
     def calc_age(self, dat, ref_time, name = "Age"):
-        hdat = pd.read_pickle(self.args.hiv_pkl)
-        edat = pd.read_pickle(self.args.epi_pkl)
-        bdat = utils.get_birth_year(edat, hdat)
+        """
+        Calculate the age in years with respect to a reference time. 
+        
+        Parameters
+        ----------
+        dat : pandas dataframe
+            a dataframe from self.set_hiv()
+        ref_time : obj : 
+            a datetime object from which the year can be extracted
+        name : str
+            name of the new age variable
+        """
+        bdat = self.get_birth_year(edat, hdat)
         dat = pd.merge(dat,  bdat, on = "IIntID", how = "left")
         dat[name] = (pd.DatetimeIndex(dat[ref_time]).year -
                 dat["BirthYear"])
         return dat
 
     def calc_age_cat(self, dat, name = "AgeCat"):
+        """
+        Calculate the age categories using values from args.agecat
+        
+        Parameters
+        ----------
+        dat : pandas dataframe
+            a dataframe from self.set_hiv()
+        name : str
+            name of the new age variable
+        """
         if "Age" not in dat.columns:
             print(f"ahri: Warning! Dataset needs an Age column to create Age categories")
         dat[name] = pd.cut(dat["Age"], self.args.agecat, 
                 right = False, include_lowest = True)
         return dat
+
+    def get_birth_year(self):
+        """
+        Get birthdates from the combined HIV and Surveillance .pkl datasets
+
+        Parameters
+        ----------
+        None
+        """
+
+        hdat = pd.read_pickle(self.args.hiv_pkl)
+        edat = pd.read_pickle(self.args.epi_pkl)
+        edat["BirthYear"] = pd.DatetimeIndex(edat["DoB"]).year
+        edat = edat[["IIntID", "BirthYear"]]
+        hdat["BirthYear"] = pd.DatetimeIndex(hdat.VisitDate).year - hdat.Age
+        hdat = hdat[["IIntID", "BirthYear"]]
+        edat = pd.concat([edat, hdat], axis = 0)
+        edat = edat.sort_values(["IIntID", "BirthYear"])
+        edat = edat.groupby(["IIntID"]).first()
+        return edat
