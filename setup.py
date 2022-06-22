@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="ahri",
-    version="0.0.3",
+    version="0.1.0",
     author="Alain Vandormael",
     author_email="vando026@umn.edu",
     description="Modules for analyzing AHRI datasets",
