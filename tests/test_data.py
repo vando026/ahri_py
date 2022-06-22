@@ -20,13 +20,14 @@ class TestAHRI(unittest.TestCase):
     targs.path_hiv_dta("RD05-99_ACDIS_HIV_Sample.dta")
     targs.path_bst_dta("RD01-03_ACDIS_BS_Sample.dta")
     targs.path_epi_dta("SurveillanceEpisodes_Sample.dta")
-    targs.path_wgh_dta("RD03-99_ACDIS_WGH_Sample.dta")
-    targs.path_mgh_dta("RD04-99_ACDIS_MGH_Sample.dta")
+    targs.path_hiv_pkl("RD05-99_ACDIS_HIV_Sample.pkl")
+    targs.path_bst_pkl("RD01-03_ACDIS_BS_Sample.pkl")
+    targs.path_epi_pkl("SurveillanceEpisodes_Sample.pkl")
     dtest = DataProc(targs)
 
-    bdat = dtest.bst_dta(write_pkl = False)
-    hdat = dtest.hiv_dta(write_pkl = False)
-    edat = dtest.epi_dta(write_pkl = False)
+    bdat = dtest.proc_bst_dta(write_pkl = True)
+    hdat = dtest.proc_hiv_dta(write_pkl = True)
+    edat = dtest.proc_epi_dta(write_pkl = True)
 
     def test_bst_dta(self):
       self.assertEqual(self.bdat.shape[0], 7)
@@ -132,7 +133,7 @@ class TestAHRI(unittest.TestCase):
         self.targs.update_years(np.arange(2010, 2020))
         self.targs.update_age({"Fem": [16, 60], "Mal": [16, 60]})
         dtest = DataProc(self.targs)
-        edat = dtest.epi_dta(write_pkl = False)
+        edat = dtest.proc_epi_dta(write_pkl = False)
         edat = dtest.set_data(edat)
         edat1 = dtest.set_epi()
         self.assertTrue(all(edat == edat1))

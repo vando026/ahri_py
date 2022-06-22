@@ -23,18 +23,11 @@ get_dates_min = get_dates(min)
 get_dates_max = get_dates(max)
 
 
-# def add_year_test(dat, bdat, var = "obs_start"):
-#     dat = pd.merge(dat, bdat, how = "left", on = "IIntID")
-#     dat["Age"] = dat[var].dt.year - dat["DoB"].dt.year
-#     return(dat)
+def add_year_test(dat, bdat, var = "obs_start"):
+    dat = pd.merge(dat, bdat, how = "left", on = "IIntID")
+    dat["Age"] = dat[var].dt.year - dat["DoB"].dt.year
+    return(dat)
 
-def get_pop_n(edat, args):
-    """Get # of all participants by year and age group"""
-    edat['AgeCat'] = pd.cut(edat['Age'], labels = None,
-            bins = args.agecat, include_lowest=True)
-    gdat = edat.groupby(["Year", "AgeCat"]).agg(
-            N = pd.NamedAgg("IIntID", len)).reset_index()
-    return(gdat)
 
 def timer(i, n):
     """A progress bar"""

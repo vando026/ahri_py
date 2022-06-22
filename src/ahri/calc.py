@@ -104,14 +104,11 @@ def est_combine(est):
 class CalcInc(DataProc):
     def __init__(self, args):
         DataProc.__init__(self, args)
-        self.hdat = self.set_hiv()
-        self.edat = self.set_epi()
-        self.bdat = utils.get_birth_date(self.edat)
-        self.rtdat = self.get_repeat_testers(self.hdat)
-        self.rtdat = utils.add_year_test(self.rtdat, self.bdat)
+        breakpoint()
+        self.rtdat = self.get_repeat_testers()
+        self.rtdat = self.calc_age(self.rtdat, ref_time = "late_neg")
         self.idat = prep_for_imp(self.rtdat)
-        self.pop_n = utils.get_pop_n(self.edat, self.args)
-
+        self.pop_n = self.get_pop_n()
 
     def inc_midpoint(self, age_adjust = True):
         self.idat[1] = imp_midpoint(self.idat[1]) 

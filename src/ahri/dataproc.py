@@ -16,13 +16,13 @@ class DataProc:
     Methods
     -------
 
-    hiv_dta(self)
-        read in the HIV .dta dataset
+    proc_hiv_dta(self)
+        read/write the HIV .dta dataset
 
-    epi_dta(self, addvars = None)
-        read in the Surviellance .dta dataset
+    proc_epi_dta(self, addvars = None)
+        read/write the Surviellance .dta dataset
 
-    bst_dta(self)
+    proc_bst_dta(self)
         read in the Bounded Structures .dta dataset
 
     get_hiv(self)
@@ -56,6 +56,9 @@ class DataProc:
 
     calc_age_cat(self, dat, name)
         calculate age categories 
+
+    get_pop_n(self)
+        get number of all participants under surveillance by year and age group
     """
 
     def __init__(self, args):
@@ -68,7 +71,7 @@ class DataProc:
 
         self.args = args
 
-    def bst_dta(self, write_pkl = True):
+    def proc_bst_dta(self, write_pkl = True):
         """ Read in the Bounded Structures .dta dataset, harmonize variable
         names. 
 
@@ -77,15 +80,16 @@ class DataProc:
         write_pk : bool :
             write the file to .pkl
         """
-
-        dat = pd.read_stata(self.args.bst_dta) 
+        # Pandas throws an error for Isigodi
+        dcols = ["BSIntId", "PIPSA", "IsUrbanOrRural"]
+        dat = pd.read_stata(self.args.bst_dta, columns = dcols) 
         dat = dat.rename(columns = {'BSIntId': 'BSIntID'})
         if write_pkl:
             dat.to_pickle(self.args.bst_pkl)
             print(f"File saved to {self.args.bst_pkl}\n")
         return(dat)
 
-    def hiv_dta(self, write_pkl = True):
+    def proc_hiv_dta(self, write_pkl = True):
         """ 
         Read in the HIV .dta dataset, keep subset of HIV test variables,
         harmonize variable names, drop irregular values for Men/Women,
@@ -119,7 +123,7 @@ class DataProc:
             print(f"File saved to {self.args.hiv_pkl}\n")
         return(hiv)
 
-    def epi_dta(self, addvars = None, write_pkl = True):     
+    def proc_epi_dta(self, addvars = None, write_pkl = True):     
         """ 
         Read in the Surveillance .dta dataset, keep subset of variables,
         harmonize variable names, drop irregular values for Men/Women,
@@ -198,7 +202,6 @@ class DataProc:
         dat : pandas dataframe
             a pandas dataframe
         """
-
         dat = dat[dat.Female.isin(list(self.args.sex.values()))]
         for s in self.args.age.keys():
             dat = dat[
@@ -208,7 +211,7 @@ class DataProc:
                     (dat.Age > self.args.age[s][1])) & 
                 dat.Year.isin(self.args.years)]
         if (self.args.drop_tasp): 
-          dat = utils.drop_tasp(dat, self.bst_dta(write_pkl = False)) 
+          dat = utils.drop_tasp(dat, self.proc_bst_dta(write_pkl = False)) 
         return(dat)
 
     def set_hiv(self):
@@ -235,7 +238,7 @@ class DataProc:
         dat = self.set_data(self.get_epi())
         return(dat)
 
-    def get_repeat_testers(self, dat = None):
+    def get_repeat_testers(self):
         """
         Get the repeat tester data from an HIV test dataset. Repeat-testers
         have a minimum of two valid HIV test dates of which the first test is
@@ -247,7 +250,7 @@ class DataProc:
             a dataframe from self.set_hiv()
         """
 
-        if (dat is None): dat = self.set_hiv()
+        dat = self.set_hiv()
         obs_start = utils.get_dates_min(dat, "HIVNegative", "obs_start")
         early_pos = utils.get_dates_min(dat, "HIVPositive", "early_pos")
         late_neg = utils.get_dates_max(dat, "HIVNegative", "late_neg")
@@ -282,6 +285,8 @@ class DataProc:
         name : str
             name of the new age variable
         """
+        edat = self.get_epi()
+        hdat = self.get_hiv()
         bdat = self.get_birth_year(edat, hdat)
         dat = pd.merge(dat,  bdat, on = "IIntID", how = "left")
         dat[name] = (pd.DatetimeIndex(dat[ref_time]).year -
@@ -324,3 +329,19 @@ class DataProc:
         edat = edat.sort_values(["IIntID", "BirthYear"])
         edat = edat.groupby(["IIntID"]).first()
         return edat
+
+
+    def get_pop_n(self):
+        """
+        Get number of all participants under surveillance by year and age group
+
+        Parameters
+        ----------
+        None
+        """
+        edat = self.set_epi()
+        edat = self.calc_age_cat(edat)
+        gdat = edat.groupby(["Year", "AgeCat"]) \
+            .agg(N = pd.NamedAgg("IIntID", len)) \
+            .reset_index()
+        return gdat

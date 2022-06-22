@@ -122,7 +122,8 @@ class SetFiles:
         ---------
         file : str : change path name of surviellance .pkl dataset
         """
-        return self.setpath(file)
+        self.epi_pkl = self.setpath(file)
+        return self.epi_pkl
 
     def path_wgh_pkl(self, file = "ACDIS_WGH_ALL.pkl"):
         """
@@ -130,7 +131,8 @@ class SetFiles:
         ---------
         file : str : change path name of WGH .pkl dataset
         """
-        return self.epi_pkl
+        self.wgh_pkl = self.setpath(file)
+        return self.wgh_pkl
 
     def path_mgh_pkl(self, file = "ACDIS_MGH_ALL.pkl"):
         """
@@ -148,7 +150,7 @@ class SetFiles:
         file : str : change path name of Bounded Structures .pkl dataset
         """
         self.bst_pkl = self.setpath(file)
-        return self.mgh_pkl
+        return self.bst_pkl
 
     def show_dta(self): 
         """
