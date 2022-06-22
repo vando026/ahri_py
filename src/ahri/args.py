@@ -4,30 +4,21 @@ import multiprocessing as mp
 
 class SetFiles:
     """
-    A class for setting the root path and file paths to the AHRI datasets.
+    A class for setting the root and file paths to the AHRI datasets.
 
     Attributes
     ----------
-    hiv_dta : str
-        name of hiv .dta dataset
-    epi_dta : str
-        name of surviellance .dta dataset
-    wgh_dta : str
-        name of women's .dta general health dataset
-    mgh_dta : str
-        name of men's .dta general health dataset
-    bst_dta : str
-        name of bounded structurs .dta dataset
-    hiv_pkl : str
-        name of hiv .pkl dataset
-    epi_pkl : str
-        name of surviellance .pkl dataset
-    wgh_pkl : str
-        name of women's .pkl general health dataset
-    mgh_pkl : str
-        name of men's .pkl general health dataset
-    bst_pkl : str
-        name of bounded structures .pkl dataset
+    root : the name of the root path to the AHRI datasets
+    hiv_dta : name of hiv .dta dataset
+    epi_dta : name of surviellance .dta dataset
+    wgh_dta : name of women's .dta general health dataset
+    mgh_dta : name of men's .dta general health dataset
+    bst_dta : name of bounded structurs .dta dataset
+    hiv_pkl : name of hiv .pkl dataset
+    epi_pkl : name of surviellance .pkl dataset
+    wgh_pkl : name of women's .pkl general health dataset
+    mgh_pkl : name of men's .pkl general health dataset
+    bst_pkl : name of bounded structures .pkl dataset
 
     Methods
     -------
@@ -42,7 +33,6 @@ class SetFiles:
     path_wgh_pkl : str : change path name of women's .pkl general health dataset
     path_mgh_pkl : str : change path name of men's .pkl general health dataset
     path_bst_pkl : str : change path name of bounded structurs .pkl dataset
-    path_pip_pkl : str : change path name of pip .pkl dataset
     """
 
     def setpath(self, x): 
@@ -59,21 +49,6 @@ class SetFiles:
         Paramaters
         ----------
         root : the name of the root path to the AHRI datasets
-
-        Attributes
-        ----------
-        root : the name of the root path to the AHRI datasets
-        hiv_dta : name of hiv .dta dataset
-        epi_dta : name of surviellance .dta dataset
-        wgh_dta : name of women's .dta general health dataset
-        mgh_dta : name of men's .dta general health dataset
-        bst_dta : name of bounded structurs .dta dataset
-        hiv_pkl : name of hiv .pkl dataset
-        epi_pkl : name of surveillance .pkl dataset
-        wgh_pkl : name of women's .pkl general health dataset
-        mgh_pkl : name of men's .pkl general health dataset
-        bst_pkl : name of bounded structurs .pkl dataset
-        pip_pkl : name of pip .pkl dataset
         """
         self.root = root
         self.hiv_dta = self.setpath("RD05-99 ACDIS HIV All.dta")
@@ -88,41 +63,90 @@ class SetFiles:
         self.bst_pkl = self.setpath("ACDIS_BoundedStructures.pkl")
 
     def path_hiv_dta(self, file = "RD05-99 ACDIS HIV All.dta"):
+        """
+        Parameters
+        -------- 
+        file: str : change path name of hiv .dta dataset
+        """
         self.hiv_dta = self.setpath(file)
         return self.hiv_dta
 
     def path_epi_dta(self, file = "SurveillanceEpisodes.dta"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of surviellance .dta dataset
+        """
         self.epi_dta = self.setpath(file)
         return self.epi_dta
 
     def path_wgh_dta(self, file = "RD03-99 ACDIS WGH ALL.dta"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of WGH .dta dataset
+        """
         self.wgh_dta = self.setpath(file)
         return self.wgh_dta
 
     def path_mgh_dta(self, file = "RD04-99 ACDIS MGH ALL.dta"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of MGH .dta dataset
+        """
         self.mgh_dta = self.setpath(file)
         return self.mgh_dta
 
     def path_bst_dta(self, file = "RD01-03 ACDIS BoundedStructures.dta"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of Bounded Structures .dta dataset
+        """
         self.bst_dta = self.setpath(file)
         return self.bst_dta
 
     def path_hiv_pkl(self, file = "ACDIS_HIV_All.pkl"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of HIV .pkl dataset
+        """
         self.hiv_pkl = self.setpath(file)
         return self.hiv_pkl
 
     def path_epi_pkl(self, file = "SurveillanceEpisodes.pkl"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of surviellance .pkl dataset
+        """
         return self.setpath(file)
 
     def path_wgh_pkl(self, file = "ACDIS_WGH_ALL.pkl"):
-        self.epi_pkl = self.setpath(file)
+        """
+        Parameters 
+        ---------
+        file : str : change path name of WGH .pkl dataset
+        """
         return self.epi_pkl
 
     def path_mgh_pkl(self, file = "ACDIS_MGH_ALL.pkl"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of MGH .pkl dataset
+        """
         self.mgh_pkl = self.setpath(file)
         return self.mgh_pkl
 
     def path_bst_pkl(self, file = "ACDIS_BoundedStructures.pkl"):
+        """
+        Parameters 
+        ---------
+        file : str : change path name of Bounded Structures .pkl dataset
+        """
         self.bst_pkl = self.setpath(file)
         return self.mgh_pkl
 
@@ -193,7 +217,7 @@ class SetArgs(SetFiles):
             a list of age intervals to great age groups
         ageby : int  
             if agecat is None, age categories are created using the 
-            age min/max and ageby values
+            age min/max and ageby values. Default is 5 year age categories. 
         nsim : int  
             number of imputations for the HIV seroconversion dates
         drop_tasp : bool 
@@ -220,6 +244,13 @@ class SetArgs(SetFiles):
         self.drop_tasp = drop_tasp
 
     def update_years(self, years):
+        """
+        Update the year ranges for selecting observations 
+
+        Parameters
+        ----------
+        year : list 
+        """
         self.years = years
         return self.years
 
@@ -236,17 +267,48 @@ class SetArgs(SetFiles):
         return self.age
 
     def update_ageby(self, ageby):
+        """
+        Update the value by which to create age groups. Default is 5 year age
+        categories.
+
+        Parameters
+        ----------
+        ageby : int
+        """
         self.ageby = ageby
+        self.agecat = np.arange(np.min(list(self.age.values())),
+          np.max(list(self.age.values())) + ageby, ageby)
         return self.ageby
 
     def update_impute_method(self, method):
+        """
+        Update the imputation method.
+
+        Parameters
+        ----------
+        method : 
+        """
         self.imp_method = method
         return self.imp_method
 
     def update_drop_tasp(self, drop):
+        """
+        Update value to drop TASP areas of not
+
+        Parameters
+        ----------
+        drop : 
+        """
         self.drop_tasp = drop
         return self.drop_tasp
 
     def update_nsim(self, nsim):
+        """
+        Update value for number of imputations 
+
+        Parameters
+        ----------
+        nsim : 
+        """
         self.nsim = nsim
         return self.nsim
