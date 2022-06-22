@@ -17,9 +17,9 @@ import os
 class TestAHRI(unittest.TestCase):
 
     # root = os.path.dirname(os.path.realpath(__file__)) 
-    root = '/home/alain/Seafile/Programs/Python/library/ahri_dev/tests'
+    root = '/home/alain/Seafile/Programs/Python/library/ahri_dev/src/ahri/data'
     args = SetArgs(root = root, years = np.arange(2005, 2020))
-    rtdat = pd.read_pickle(os.path.join(root, 'python/rtdat.pkl'))
+    rtdat = pd.read_pickle(os.path.join(root, 'rtdat.pkl'))
     sdat = calc.prep_for_imp(rtdat)
     sdat[1] = calc.imp_midpoint(sdat[1])
     sdatx = calc.agg_data(sdat, args)
