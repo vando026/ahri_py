@@ -31,27 +31,6 @@ def imp_midpoint(dat1):
     idates = np.floor((dat1[:, 2] +  dat1[:, 3]) / 2)
     return(np.c_[dat1, idates])
 
-def agg_data(dat, args):
-    """Split repeat-tester data into episodes""" 
-    ndat0 = dat[0][:, [0, 1, 2,  4, 5]]
-    # replace early_pos with imp date at 6
-    ndat1 = dat[1][:, [0, 1, 6,  4, 5]]
-    ndat = np.concatenate([ndat0, ndat1],
-            dtype = np.intc, casting = 'unsafe')
-    pdat = cypy.pre_split(ndat) 
-    edat = cypy.split_data(pdat)
-    # aggregate the data by agecat and year
-    dat = pd.DataFrame(np.vstack(edat), 
-            columns = ["Year", "Days", "Event", "Age"])
-    dat["PYears"] = dat["Days"] / 365
-    dat["AgeCat"] = pd.cut(dat["Age"], labels = None,
-            bins = args.agecat, include_lowest=True)
-    dat = dat.groupby(["Year", "AgeCat"]).agg(
-            Events = pd.NamedAgg("Event", sum),
-            PYears = pd.NamedAgg("PYears", sum)
-            ).reset_index()
-    return(dat)
-
 
 def calc_gamma(dat, pop_dat):
     years = np.unique(dat.Year.values)
@@ -101,18 +80,40 @@ def est_combine(est):
     return(out)
 
 
-class CalcInc(DataProc):
+class CalcInc(SetData):
     def __init__(self, args):
-        DataProc.__init__(self, args)
+        SetData.__init__(self, args)
         breakpoint()
-        self.rtdat = self.get_repeat_testers()
-        self.rtdat = self.calc_age(self.rtdat, ref_time = "late_neg")
+        self.rtdat = self.calc_age(self.repeat_tester_data, 
+                ref_time = "late_neg")
         self.idat = prep_for_imp(self.rtdat)
         self.pop_n = self.get_pop_n()
 
+    def agg_data(self, dat):
+        """Split repeat-tester data into episodes""" 
+        ndat0 = dat[0][:, [0, 1, 2,  4, 5]]
+        # replace early_pos with imp date at 6
+        ndat1 = dat[1][:, [0, 1, 6,  4, 5]]
+        ndat = np.concatenate([ndat0, ndat1],
+                dtype = np.intc, casting = 'unsafe')
+        pdat = cypy.pre_split(ndat) 
+        edat = cypy.split_data(pdat)
+        # aggregate the data by agecat and year
+        dat = pd.DataFrame(np.vstack(edat), 
+                columns = ["Year", "Days", "Event", "Age"])
+        dat["PYears"] = dat["Days"] / 365
+        dat["AgeCat"] = pd.cut(dat["Age"], labels = None,
+                bins = self.args.agecat, include_lowest=True)
+        dat = dat.groupby(["Year", "AgeCat"]).agg(
+                Events = pd.NamedAgg("Event", sum),
+                PYears = pd.NamedAgg("PYears", sum)
+                ).reset_index()
+        return(dat)
+
+
     def inc_midpoint(self, age_adjust = True):
         self.idat[1] = imp_midpoint(self.idat[1]) 
-        sdat = agg_data(self.idat, self.args)
+        sdat = self.agg_data(self.idat)
         if (age_adjust is not True):
             self.pop_n["N"] = 1
         res = calc_gamma(sdat, self.pop_n)
@@ -125,7 +126,7 @@ class CalcInc(DataProc):
             utils.timer(i, self.args.nsim)
         np.random.seed()
         self.idat[1] = imp_random(self.idat[1]) 
-        sdat = agg_data(self.idat, self.args)
+        sdat = self.agg_data(self.idat)
         res = calc_gamma(sdat, self.pop_n)
         return(res)
 

@@ -3,7 +3,7 @@ import sys
 from ahri import utils
 from ahri import args
 from ahri.args import SetFiles, SetArgs
-from ahri.dataproc import DataProc
+from ahri.dataproc import DataProc, SetData
 import numpy as np
 import pandas as pd
 import os
@@ -23,15 +23,15 @@ class TestAHRI(unittest.TestCase):
     targs.path_hiv_pkl("RD05-99_ACDIS_HIV_Sample.pkl")
     targs.path_bst_pkl("RD01-03_ACDIS_BS_Sample.pkl")
     targs.path_epi_pkl("SurveillanceEpisodes_Sample.pkl")
-    dtest = DataProc(targs)
 
-    bdat = dtest.proc_bst_dta(write_pkl = True)
-    hdat = dtest.proc_hiv_dta(write_pkl = True)
-    edat = dtest.proc_epi_dta(write_pkl = True)
+    dread = DataProc(targs)
+    bdat = dread.proc_bst_dta(write_pkl = True)
+    hdat = dread.proc_hiv_dta(write_pkl = True)
+    edat = dread.proc_epi_dta(write_pkl = True)
 
     def test_bst_dta(self):
       self.assertEqual(self.bdat.shape[0], 7)
-      self.assertEqual(self.bdat.shape[1], 18)
+      self.assertEqual(self.bdat.shape[1], 3)
       self.assertEqual(len(np.unique(self.bdat.BSIntID)), 7)
       self.assertEqual(self.bdat[self.bdat["PIPSA"]. \
           isin(["Southern PIPSA"])].shape[0], 6)
@@ -77,9 +77,8 @@ class TestAHRI(unittest.TestCase):
     def test_get_hiv1(self):
         self.targs.update_years(np.arange(2007, 2015))
         self.targs.update_age({"Fem": [40, 80]})
-        dtest = DataProc(self.targs)
-        hdat = dtest.get_hiv()
-        hiv1 = dtest.set_data(hdat)
+        dtest = SetData(self.targs)
+        hiv1 = dtest.hiv_data
         self.assertEqual(np.unique(hiv1.Female).tolist(), [1]) 
         self.assertEqual(hiv1.Year.tolist(), [2007])
         self.assertEqual(hiv1.Age.tolist(), [72])
@@ -89,9 +88,8 @@ class TestAHRI(unittest.TestCase):
         self.targs.update_years(np.arange(2005, 2011))
         self.targs.update_age({"Mal": [20, 25]})
         self.targs.update_drop_tasp(drop = False)
-        dtest = DataProc(self.targs)
-        hdat = dtest.get_hiv()
-        hiv = dtest.set_data(hdat)
+        dtest = SetData(self.targs)
+        hiv = dtest.hiv_data
         hiv = dtest.calc_age_cat(hiv)
         self.assertEqual(np.unique(hiv.Female).tolist(), [0]) 
         self.assertEqual(hiv.Year.tolist(), [2005])
@@ -102,9 +100,8 @@ class TestAHRI(unittest.TestCase):
     def test_age_cat(self):
         self.targs.update_years(np.arange(2001, 2018))
         self.targs.update_age({"Fem": [15, 54], "Mal": [15, 54]})
-        dtest = DataProc(self.targs)
-        hdat = dtest.get_hiv()
-        hiv = dtest.set_data(hdat)
+        dtest = SetData(self.targs)
+        hiv = dtest.hiv_data
         hiv = dtest.calc_age_cat(hiv)
         self.assertEqual(np.sort(np.unique(hiv.IIntID)).tolist(), \
               [795, 800, 1356, 1436])
@@ -117,27 +114,6 @@ class TestAHRI(unittest.TestCase):
         self.assertEqual(len(hiv.loc[hiv.AgeCat.astype(str) == "[30, 35)", "IIntID"]), 2)
         self.assertEqual(len(hiv.loc[hiv.AgeCat.astype(str) == "[70, 75)", "IIntID"]), 0)
     
-    def test_hiv_equal(self):
-        self.targs.update_years(np.arange(2005, 2017))
-        self.targs.update_age({"Fem": [15, 54], "Mal": [15, 54]})
-        dtest = DataProc(self.targs)
-        hdat = dtest.get_hiv()
-        hiv = dtest.set_data(hdat)
-        hiv1 = dtest.set_hiv()
-        self.assertTrue(all(hiv1.IIntID ==  hiv.IIntID))
-        self.assertTrue(all(hiv1.Age ==  hiv.Age))
-        self.assertTrue(all(hiv1.Year ==  hiv.Year))
-        self.assertTrue(all(hiv1 == hiv))
-
-    def test_epi_equal(self):
-        self.targs.update_years(np.arange(2010, 2020))
-        self.targs.update_age({"Fem": [16, 60], "Mal": [16, 60]})
-        dtest = DataProc(self.targs)
-        edat = dtest.proc_epi_dta(write_pkl = False)
-        edat = dtest.set_data(edat)
-        edat1 = dtest.set_epi()
-        self.assertTrue(all(edat == edat1))
-
 if __name__ == '__main__':
     unittest.main()
 
