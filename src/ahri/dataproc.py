@@ -150,6 +150,26 @@ class SetAtInit:
         """
         self.args = args 
 
+    def drop_tasp(self, dat, bdat):
+        """
+        Method to drop individuals who tested in TasP (Northern) areas
+    
+        Parameters
+        ---------
+        dat : pandas dataframe
+            a pandas dataframe
+
+        bdat : pandas dataframe
+            a pandas dataframe from self.bst_data
+
+        """
+        bdat = bdat[["BSIntID", "PIPSA"]]
+        dat = pd.merge(dat, bdat, on="BSIntID", how="left")
+        dat = dat[dat["PIPSA"].isin(["Southern PIPSA", np.nan])]
+        dat = dat.drop(["PIPSA"], axis=1)
+        return dat
+
+
     def set_data(self, dat):
         """
         Method to standardize the datasets by age, sex,  year, and area. The values
@@ -169,7 +189,7 @@ class SetAtInit:
                     (dat.Age > self.args.age[s][1])) & 
                 dat.Year.isin(self.args.years)]
         if (self.args.drop_tasp): 
-          dat = utils.drop_tasp(dat, pd.read_pickle(self.args.bst_pkl))
+          dat = self.drop_tasp(dat, self.bst_data)
         return(dat)
 
     def get_repeat_testers(self, dat):
@@ -232,7 +252,8 @@ class SetData(SetAtInit):
     Attributes
     ----------
     hiv_data 
-       the hiv dataset that has been transformed using the SetArgs attributes 
+       the hiv dataset that has been transformed using the SetArgs attributes.
+       Age is the age at the latest HIV-negative date
 
     epi_data 
        the surveillance episodes dataset that has been transformed using 
@@ -256,9 +277,9 @@ class SetData(SetAtInit):
     def __init__(self, args):
         super().__init__(args)
         self.args = args
+        self.bst_data = pd.read_pickle(self.args.bst_pkl) 
         self.hiv_data = self.set_data(pd.read_pickle(self.args.hiv_pkl))
         self.epi_data = self.set_data(pd.read_pickle(self.args.epi_pkl))
-        self.bst_data = pd.read_pickle(self.args.bst_pkl) 
         rtdat  = self.get_repeat_testers(self.hiv_data)
         self.repeat_tester_data = self.calc_age(rtdat, ref_time = "late_neg")
 

@@ -3,7 +3,7 @@ import sys
 from ahri import utils
 from ahri import args
 from ahri.args import SetFiles, SetArgs
-from ahri.dataproc import DataProc, SetData
+from ahri.dataproc import DataProc, SetData, SetAtInit
 import numpy as np
 import pandas as pd
 import os
@@ -45,7 +45,7 @@ class TestAHRI(unittest.TestCase):
       self.assertEqual(np.sum(self.hdat.Age), 427)
 
     def test_read_hiv2(self):
-      hdat2 = utils.drop_tasp(self.hdat, self.bdat)
+      hdat2 = SetAtInit(self.targs).drop_tasp(self.hdat, self.bdat)
       self.assertEqual(np.sort(np.unique((
           hdat2.loc[~np.isnan(hdat2.BSIntID), \
               "BSIntID"])).astype(int)).tolist(), \
@@ -64,7 +64,7 @@ class TestAHRI(unittest.TestCase):
               [ 616, 3455, 6496, 9305, 15588, 16563, 17843 ])
 
     def test_read_epi2(self):
-      edat2 = utils.drop_tasp(self.edat, self.bdat)
+      edat2 = SetAtInit(self.targs).drop_tasp(self.edat, self.bdat)
       self.assertEqual(len(np.unique(edat2.IIntID)), 5) 
       self.assertEqual(len(np.unique(edat2.BSIntID)), 6) 
       self.assertEqual(len(np.unique(edat2.loc[edat2.Female==1, \

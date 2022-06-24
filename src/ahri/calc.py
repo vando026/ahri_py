@@ -84,9 +84,7 @@ class CalcInc(SetData):
     def __init__(self, args):
         SetData.__init__(self, args)
         breakpoint()
-        self.rtdat = self.calc_age(self.repeat_tester_data, 
-                ref_time = "late_neg")
-        self.idat = prep_for_imp(self.rtdat)
+        self.idat = prep_for_imp(self.repeat_tester_data)
         self.pop_n = self.get_pop_n()
 
     def agg_data(self, dat):

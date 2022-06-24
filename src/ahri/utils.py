@@ -2,14 +2,6 @@ import pandas as pd
 import numpy as np
 import sys
 
-def drop_tasp(dat, bdat = None):
-  """Function to drop individuals who tested in TasP areas"""
-  bdat = bdat[["BSIntID", "PIPSA"]]
-  dat = pd.merge(dat, bdat, on="BSIntID", how="left")
-  dat = dat[dat["PIPSA"].isin(["Southern PIPSA", np.nan])]
-  dat = dat.drop(["PIPSA"], axis=1)
-  return(dat)
-
 def get_dates(f):
   """ Function to get earliest/latest test dates. """
   def action(dat, var, name):
