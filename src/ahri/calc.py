@@ -1,11 +1,19 @@
 from datetime import datetime
-from ahri.dataproc import DataProc
-from ahri import utils
+from ahri.dataproc import SetData
 from ahri import cypy
 import multiprocessing as mp
 from scipy.stats import t
 import numpy as np
 import pandas as pd
+import sys
+
+def timer(i, n):
+    """A progress bar"""
+    if i % 2 == 0: 
+        j = (i + 1) / n
+        sys.stdout.write('\r')
+        sys.stdout.write("[%-20s] %d%%" % ('='*int(20*j), 100 * j))
+        sys.stdout.flush()
 
 def prep_for_imp(dat, origin = datetime(2000, 1, 1)):
     """Prepare repeat-tester data for imputation"""
@@ -83,7 +91,6 @@ def est_combine(est):
 class CalcInc(SetData):
     def __init__(self, args):
         SetData.__init__(self, args)
-        breakpoint()
         self.idat = prep_for_imp(self.repeat_tester_data)
         self.pop_n = self.get_pop_n()
 
@@ -100,8 +107,7 @@ class CalcInc(SetData):
         dat = pd.DataFrame(np.vstack(edat), 
                 columns = ["Year", "Days", "Event", "Age"])
         dat["PYears"] = dat["Days"] / 365
-        dat["AgeCat"] = pd.cut(dat["Age"], labels = None,
-                bins = self.args.agecat, include_lowest=True)
+        dat = self.calc_age_cat(dat)
         dat = dat.groupby(["Year", "AgeCat"]).agg(
                 Events = pd.NamedAgg("Event", sum),
                 PYears = pd.NamedAgg("PYears", sum)
@@ -121,7 +127,7 @@ class CalcInc(SetData):
     def do_rand_imp(self, i):
         # you have to reset random seed for each process
         if self.args.verbose:
-            utils.timer(i, self.args.nsim)
+            timer(i, self.args.nsim)
         np.random.seed()
         self.idat[1] = imp_random(self.idat[1]) 
         sdat = self.agg_data(self.idat)

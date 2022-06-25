@@ -232,10 +232,9 @@ class SetArgs(SetFiles):
 
         """
         super().__init__(root)
-        self.agecat = np.arange(np.min(list(age.values())),
-          np.max(list(age.values())) + ageby, ageby)
-        self.sdict = {"Fem": 1, "Mal": 0}
-        self.sex = {s:self.sdict[s] for s in age.keys()}
+        # self.agecat = np.arange(np.min(list(age.values())),
+          # np.max(list(age.values())) + ageby, ageby)
+        # self.sex = {s:self.__sdict[s] for s in age.keys()}
         self.years = years
         self.age = age
         self.ageby = ageby
@@ -244,6 +243,18 @@ class SetArgs(SetFiles):
         self.mcores = mcores
         self.verbose = verbose
         self.drop_tasp = drop_tasp
+        self.agecat = self.update_age_cat()
+        self.sex = self.update_sex()
+
+    def update_age_cat(self):
+        self.agecat = np.arange(np.min(list(self.age.values())),
+            np.max(list(self.age.values())) + self.ageby, self.ageby)
+        return self.agecat 
+
+    def update_sex(self):
+        sdict = {"Fem": 1, "Mal": 0}
+        self.sex = {s:sdict[s] for s in self.age.keys()}
+        return self.sex 
 
     def update_years(self, years):
         """
@@ -265,7 +276,8 @@ class SetArgs(SetFiles):
         age : dict 
         """
         self.age = age
-        self.sex = {s:self.sdict[s] for s in age.keys()}
+        self.agecat = self.update_age_cat()
+        self.sex = self.update_sex()
         return self.age
 
     def update_ageby(self, ageby):
@@ -278,8 +290,7 @@ class SetArgs(SetFiles):
         ageby : int
         """
         self.ageby = ageby
-        self.agecat = np.arange(np.min(list(self.age.values())),
-          np.max(list(self.age.values())) + ageby, ageby)
+        self.agecat = self.update_age_cat()
         return self.ageby
 
     def update_impute_method(self, method):

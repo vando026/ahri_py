@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from ahri.args import SetArgs
-from ahri import utils
 from functools import reduce
 
 
@@ -122,6 +121,8 @@ class DataProc:
             print(f"File saved to {self.args.epi_pkl}\n")
         return(dat)
 
+
+
 class SetAtInit:
     """
     A class that provides methods to standardize data transformations 
@@ -138,6 +139,9 @@ class SetAtInit:
 
     calc_age(self, dat, name, ref_time)
         calculate the age in years
+
+    get_dates_max(self, dat, )
+        method to get minimum and maximum dates 
 
     """
 
@@ -192,6 +196,26 @@ class SetAtInit:
           dat = self.drop_tasp(dat, self.bst_data)
         return(dat)
 
+    def get_dates(self, dat, var, name, f):
+        """
+        Method to get earliest/latest test dates
+
+        Parameters
+        ----------
+        dat : pandas dataframe
+            name of dataset
+        var : pd.datetime
+            variable of dates
+        name : str
+            new name of new variable
+        f : function
+            a min or max function
+        """
+        dat = dat[['IIntID', var]].dropna(subset=[var])
+        dat = dat.groupby(['IIntID'], as_index=False)[var].agg(f)
+        dat.columns = ['IIntID', name]
+        return dat
+
     def get_repeat_testers(self, dat):
         """
         Get the repeat tester data from an HIV test dataset. Repeat-testers
@@ -204,10 +228,10 @@ class SetAtInit:
             a dataframe from from self.hiv_data
         """
 
-        obs_start = utils.get_dates_min(dat, "HIVNegative", "obs_start")
-        early_pos = utils.get_dates_min(dat, "HIVPositive", "early_pos")
-        late_neg = utils.get_dates_max(dat, "HIVNegative", "late_neg")
-        late_pos = utils.get_dates_max(dat, "HIVPositive", "late_pos")
+        obs_start = self.get_dates(dat, "HIVNegative", "obs_start", f = min)
+        early_pos = self.get_dates(dat, "HIVPositive", "early_pos", f = min)
+        late_neg = self.get_dates(dat, "HIVNegative", "late_neg", f = max)
+        late_pos = self.get_dates(dat, "HIVPositive", "late_pos", f = max)
         dat = dat[['IIntID', 'Female']].drop_duplicates()
         dfs = [dat, obs_start, late_neg, early_pos, late_pos]
         dt = reduce(lambda left,right: \
@@ -330,8 +354,12 @@ class SetData(SetAtInit):
         ----------
         None
         """
-        edat = self.calc_age_cat(self.epi_data)
-        dat = edat.groupby(["Year", "AgeCat"]) \
+        dat = self.epi_data
+        dat = dat[["IIntID", "Year", "Age", "ObservationStart"]]
+        dat = dat.sort_values(["IIntID", "ObservationStart"])
+        dat = dat.groupby(["IIntID", "Year"]).first().reset_index()
+        dat = self.calc_age_cat(dat)
+        dat = dat.groupby(["Year", "AgeCat"]) \
             .agg(N = pd.NamedAgg("IIntID", len)) \
             .reset_index()
         return dat

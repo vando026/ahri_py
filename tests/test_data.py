@@ -1,6 +1,5 @@
 import unittest
 import sys
-from ahri import utils
 from ahri import args
 from ahri.args import SetFiles, SetArgs
 from ahri.dataproc import DataProc, SetData, SetAtInit
@@ -113,6 +112,18 @@ class TestAHRI(unittest.TestCase):
         self.assertEqual(len(hiv.loc[hiv.AgeCat.astype(str) == "[25, 30)", "IIntID"]), 1)
         self.assertEqual(len(hiv.loc[hiv.AgeCat.astype(str) == "[30, 35)", "IIntID"]), 2)
         self.assertEqual(len(hiv.loc[hiv.AgeCat.astype(str) == "[70, 75)", "IIntID"]), 0)
+
+    def test_pop_n(self):
+        # breakpoint()
+        self.targs.update_years(np.arange(2004, 2019))
+        self.targs.update_age({"Fem": [15, 105], "Mal": [15, 105]})
+        self.targs.update_ageby(20)
+        dtest = SetData(self.targs)
+        pop_n = dtest.get_pop_n()
+        self.assertEqual(pop_n.loc[(pop_n.AgeCat.astype(str) == "[15, 35)") &
+            (pop_n.Year == 2004), "N"].tolist(), [2.0])
+        self.assertEqual(pop_n.loc[(pop_n.AgeCat.astype(str) == "[15, 35)") &
+            (pop_n.Year == 2014), "N"].tolist(), [4.0])
     
 if __name__ == '__main__':
     unittest.main()
