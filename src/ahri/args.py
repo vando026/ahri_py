@@ -33,6 +33,8 @@ class SetFiles:
     path_wgh_pkl : str : change path name of women's .pkl general health dataset
     path_mgh_pkl : str : change path name of men's .pkl general health dataset
     path_bst_pkl : str : change path name of bounded structurs .pkl dataset
+    show_dta_paths : Show the dta file names
+    show_pkl_paths : Show the pkl file names
     """
 
     def setpath(self, x): 
@@ -152,7 +154,7 @@ class SetFiles:
         self.bst_pkl = self.setpath(file)
         return self.bst_pkl
 
-    def show_dta(self): 
+    def show_dta_paths(self): 
         """
         Print out the file paths to the ahri .dta datasets
         """
@@ -160,7 +162,7 @@ class SetFiles:
         print(self.hiv_dta, self.epi_dta, self.bst_dta,
                 self.mgh_dta, self.wgh_dta, sep = "\n")
 
-    def show_pkl(self): 
+    def show_pkl_paths(self): 
         """
         Print out the file paths to the ahri .pkl datasets
         """
@@ -204,7 +206,7 @@ class SetArgs(SetFiles):
         years = np.arange(2005, 2020),
         age = {"Fem": [15, 49], "Mal": [15, 54]}, 
         ageby = 5,
-        drop_tasp = True, verbose = True,
+        drop_tasp = True, verbose = False,
         nsim = 1, imp_method = None,
         mcores = mp.cpu_count()):
         """Parameters

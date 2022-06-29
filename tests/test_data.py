@@ -2,7 +2,7 @@ import unittest
 import sys
 from ahri import args
 from ahri.args import SetFiles, SetArgs
-from ahri.dataproc import DataProc, SetData, SetAtInit
+from ahri.dataproc import DataProc, SetData, DataMethods
 import numpy as np
 import pandas as pd
 import os
@@ -19,9 +19,6 @@ class TestAHRI(unittest.TestCase):
     targs.path_hiv_dta("RD05-99_ACDIS_HIV_Sample.dta")
     targs.path_bst_dta("RD01-03_ACDIS_BS_Sample.dta")
     targs.path_epi_dta("SurveillanceEpisodes_Sample.dta")
-    targs.path_hiv_pkl("RD05-99_ACDIS_HIV_Sample.pkl")
-    targs.path_bst_pkl("RD01-03_ACDIS_BS_Sample.pkl")
-    targs.path_epi_pkl("SurveillanceEpisodes_Sample.pkl")
 
     dread = DataProc(targs)
     bdat = dread.proc_bst_dta(write_pkl = True)
@@ -44,7 +41,7 @@ class TestAHRI(unittest.TestCase):
       self.assertEqual(np.sum(self.hdat.Age), 427)
 
     def test_read_hiv2(self):
-      hdat2 = SetAtInit(self.targs).drop_tasp(self.hdat, self.bdat)
+      hdat2 = DataMethods(self.targs).drop_tasp(self.hdat, self.bdat)
       self.assertEqual(np.sort(np.unique((
           hdat2.loc[~np.isnan(hdat2.BSIntID), \
               "BSIntID"])).astype(int)).tolist(), \
@@ -63,7 +60,7 @@ class TestAHRI(unittest.TestCase):
               [ 616, 3455, 6496, 9305, 15588, 16563, 17843 ])
 
     def test_read_epi2(self):
-      edat2 = SetAtInit(self.targs).drop_tasp(self.edat, self.bdat)
+      edat2 = DataMethods(self.targs).drop_tasp(self.edat, self.bdat)
       self.assertEqual(len(np.unique(edat2.IIntID)), 5) 
       self.assertEqual(len(np.unique(edat2.BSIntID)), 6) 
       self.assertEqual(len(np.unique(edat2.loc[edat2.Female==1, \

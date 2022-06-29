@@ -50,7 +50,8 @@ class DataProc:
         dat = dat.rename(columns = {'BSIntId': 'BSIntID'})
         if write_pkl:
             dat.to_pickle(self.args.bst_pkl)
-            print(f"File saved to {self.args.bst_pkl}\n")
+            if self.args.verbose:
+                print(f"File saved to {self.args.bst_pkl}\n")
         return(dat)
 
     def proc_hiv_dta(self, write_pkl = True):
@@ -84,7 +85,8 @@ class DataProc:
         hiv['Year'] = pd.DatetimeIndex(hiv.VisitDate).year
         if write_pkl:
             hiv.to_pickle(self.args.hiv_pkl)
-            print(f"File saved to {self.args.hiv_pkl}\n")
+            if self.args.verbose:
+                print(f"File saved to {self.args.hiv_pkl}\n")
         return(hiv)
 
     def proc_epi_dta(self, addvars = None, write_pkl = True):     
@@ -118,12 +120,13 @@ class DataProc:
         dat = dat.assign(Female = (dat.Female=='Female').astype(int))
         if write_pkl:
             dat.to_pickle(self.args.epi_pkl)
-            print(f"File saved to {self.args.epi_pkl}\n")
+            if self.args.verbose:
+                print(f"File saved to {self.args.epi_pkl}\n")
         return(dat)
 
 
 
-class SetAtInit:
+class DataMethods:
     """
     A class that provides methods to standardize data transformations 
     across the datatsets.
@@ -142,6 +145,15 @@ class SetAtInit:
 
     get_dates_max(self, dat, )
         method to get minimum and maximum dates 
+    
+    get_birth_year(self)
+        get the year of birth from the HIV and Surveillance .pkl datasets
+
+    calc_age_cat(self, dat, name)
+        calculate age categories 
+
+    get_pop_n(self)
+        get number of all participants under surveillance by year and age group
 
     """
 
@@ -248,65 +260,6 @@ class SetAtInit:
         rt['sero_event'] = pd.notna(rt.early_pos).astype(int)
         return(rt)
 
-    def calc_age(self, dat, ref_time, name = "Age"):
-        """
-        Calculate the age in years with respect to a reference time. 
-        
-        Parameters
-        ----------
-        dat : pandas dataframe
-        ref_time : obj : 
-            a datetime object from which the year can be extracted
-        name : str
-            name of the new age variable
-        """
-        bdat = self.get_birth_year()
-        dat = pd.merge(dat,  bdat, on = "IIntID", how = "left")
-        dat[name] = (pd.DatetimeIndex(
-            dat[ref_time]).year - dat["BirthYear"])
-        return dat
-
-
-class SetData(SetAtInit):
-    """
-    A class that provides methods to read in the standard AHRI .dta files
-    (Stata files), write them to .pkl format, and standardize data
-    transformations across the datatsets.
-
-    Attributes
-    ----------
-    hiv_data 
-       the hiv dataset that has been transformed using the SetArgs attributes.
-       Age is the age at the latest HIV-negative date
-
-    epi_data 
-       the surveillance episodes dataset that has been transformed using 
-       the SetArgs attributes 
-
-    bst_data 
-       the bounded structures dataset, needed to drop PIP areas
-
-    Methods
-    -------
-    get_birth_year(self)
-        get the year of birth from the HIV and Surveillance .pkl datasets
-
-    calc_age_cat(self, dat, name)
-        calculate age categories 
-
-    get_pop_n(self)
-        get number of all participants under surveillance by year and age group
-    """
-
-    def __init__(self, args):
-        super().__init__(args)
-        self.args = args
-        self.bst_data = pd.read_pickle(self.args.bst_pkl) 
-        self.hiv_data = self.set_data(pd.read_pickle(self.args.hiv_pkl))
-        self.epi_data = self.set_data(pd.read_pickle(self.args.epi_pkl))
-        rtdat  = self.get_repeat_testers(self.hiv_data)
-        self.repeat_tester_data = self.calc_age(rtdat, ref_time = "late_neg")
-
     def get_birth_year(self):
         """
         Get birthdates from the combined HIV and Surveillance .pkl datasets
@@ -327,7 +280,23 @@ class SetData(SetAtInit):
         dat = dat.groupby(["IIntID"]).first()
         return dat
 
-
+    def calc_age(self, dat, ref_time, name = "Age"):
+        """
+        Calculate the age in years with respect to a reference time. 
+        
+        Parameters
+        ----------
+        dat : pandas dataframe
+        ref_time : obj : 
+            a datetime object from which the year can be extracted
+        name : str
+            name of the new age variable
+        """
+        bdat = self.get_birth_year()
+        dat = pd.merge(dat,  bdat, on = "IIntID", how = "left")
+        dat[name] = (pd.DatetimeIndex(
+            dat[ref_time]).year - dat["BirthYear"])
+        return dat
 
     def calc_age_cat(self, dat, name = "AgeCat"):
         """
@@ -363,3 +332,38 @@ class SetData(SetAtInit):
             .agg(N = pd.NamedAgg("IIntID", len)) \
             .reset_index()
         return dat
+
+
+class SetData(DataMethods):
+    """
+    A class that provides methods to read in the standard AHRI .dta files
+    (Stata files), write them to .pkl format, and standardize data
+    transformations across the datatsets.
+
+    Attributes
+    ----------
+    hiv_data 
+       the hiv dataset that has been transformed using the SetArgs attributes.
+       Age is the age at the latest HIV-negative date
+
+    epi_data 
+       the surveillance episodes dataset that has been transformed using 
+       the SetArgs attributes 
+
+    bst_data 
+       the bounded structures dataset, needed to drop PIP areas
+
+    """
+
+    def __init__(self, args):
+        super().__init__(args)
+        self.args = args
+        self.bst_data = pd.read_pickle(self.args.bst_pkl) 
+        self.hiv_data = self.set_data(pd.read_pickle(self.args.hiv_pkl))
+        self.epi_data = self.set_data(pd.read_pickle(self.args.epi_pkl))
+        rtdat  = self.get_repeat_testers(self.hiv_data)
+        self.repeat_tester_data = self.calc_age(rtdat, ref_time = "late_neg")
+
+
+
+
