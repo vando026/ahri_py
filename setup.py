@@ -22,6 +22,7 @@ setup(
     ],
     package_dir={"": "src"},
     packages=find_packages(where="src"),
+    package_data={"ahri": ['data/*.dta']},
     python_requires=">=3.8",
     install_requires = ['numpy', 'pandas', 'scipy'],
     ext_modules = [Extension("ahri.cypy", ["src/ahri/cypy.c"])],
